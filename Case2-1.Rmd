@@ -4,13 +4,35 @@ author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "September 28, 2017"
 output: html_document
 ---
+```{r}
+library(ggplot)
+library(survival)
+
+dat <- read.table("kellydat.txt", header=T)
+```
 
 #Introduction
 
 
 #Exploratory Data Analysis
 ```{r}
+missing_d <- (which(is.na(dat)))
+dat[missing_d,] # no NA's
 
+dat$race = "Others"
+dat$race[dat$black==1]="Black"
+dat$race[dat$hisp==1]="Hispanic"
+dat$gender = "male"
+dat$gender[dat$male==0]="female"
+dat$symptom = 0
+dat$symptom[dat$sn1==1]=1
+dat$symptom[dat$sn2==1]=2
+dat$symptom[dat$sn3==1]=3
+dat$symptom[dat$all4==1]=4
+
+ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender))
+ggplot(data = dat, aes(x=symptom, y=nctdel)) +geom_boxplot()
+ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))
 ```
 
 
