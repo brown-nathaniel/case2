@@ -31,7 +31,7 @@ dat$symptom[dat$sn3==1]=3
 dat$symptom[dat$all4==1]=4
 
 ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender))
-ggplot(data = dat, aes(x=symptom, y=nctdel)) +geom_boxplot()
+ggplot(data = dat, aes(x=as.factor(symptom), y=nctdel)) +geom_boxplot()
 ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))
 ```
 
