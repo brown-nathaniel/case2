@@ -5,16 +5,41 @@ date: "September 28, 2017"
 output: html_document
 ---
 ```{r}
-library(ggplot)
+library(ggplot2)
 library(survival)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 
 dat <- read.table("kellydat.txt", header=T)
+
 ```
 
 #Introduction
 
 The purpose of this project is to investigate the effect of the number of symptoms, gender, and race, on time to neurological assessment. 
+
+Another suggestion for the introduction.  
+
+#Introduction
+These data are from a study of time to critical neurological assessment for patients with stroke-like symptoms who are admitted to the emergency room. We are interested in the factors predictive of the time to critical neurological assessment following admission to the ED for n=335 patients with mild to moderate motor impairment. The goal of the analysis is to perform inferences on the impact of clinical presentation, gender and race on time to neurological assessment where clinical presentation is measured as a count of reported major stroke symptoms, including headache, loss of motor skills or weakness, trouble talking or understanding, and vision problems.
+
+
+#Variable Exploration 
+
+The data set contains 335 observations across 9 variables. To define: 
+
+
+Variable Name | Short Description | Type  
+------------- | ------------- | --------------
+nctdel|min of neurologist time to assessment & CT scan from arrival at ER| continous
+fail|1 if got neurologist/CT scan & 0 otherwise|categorical
+male| 1 if male, 0 if female| categorical
+black|1 if black, 0 if not black|categorical
+hisp|1 if hispanic, 0 if not hispanic|categorical
+sn1|0/1 indicator 1 main symptom| categorical
+sn2|0/1 indicator 2 main symptom| categorical
+sn3|0/1 indicator 3 main symptom| categorical
+all4|0/1 indicator all main sumptoms|categorical 
+
 
 #Exploratory Data Analysis
 ```{r}
@@ -43,6 +68,50 @@ ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))
 ```{r}
 
 ```
+
+
+Kaplan-Meier Analysis
+
+Background:
+Kaplan-Meier estimate is one of the best options to be used to measure the fraction of subjects living for a certain amount of time. The Kaplan-Meier estimate is also called as "product limit estimate". It involves computing of probabilities of occurrence of event at a certain point of time. Specifically, for each time interval, survival probability is calculated as the number of subjects surviving divided by the number of patients at risk. Subjects who have died, dropped out, or move out are not counted as "at risk" i.e., subjects who are lost are considered "censored" and are not counted in the denominator. Total probability of survival till that time interval is calculated by multiplying all the probabilities of survival at all time intervals preceding that time (by applying law of multiplication of probability to calculate cumulative probability). There are three assumptions used in this analysis. Firstly, we assume that at any time patients who are censored have the same survival prospects as those who continue to be followed. Secondly, we assume that the survival probabilities are the same for subjects recruited early and late in the study. Thirdly, we assume that the event happens at the time specified.
+
+Using our graphs: 
+We can compare curves for two different groups of subjects. For example, compare the survival pattern for subjects on a standard therapy with a newer therapy. We can look for gaps in these curves in a horizontal or vertical direction. A vertical gap means that at a specific time point, one group had a greater fraction of subjects surviving. A horizontal gap means that it took longer for one group to experience a certain fraction of deaths.
+
+The two survival curves can be compared statistically by testing the null hypothesis i.e. there is no difference regarding survival among two interventions.
+
+##insert analysis once I check with Jonathan to make sure this is the right idea 
+
+###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
+```{r}
+par(mfrow=c(1,3))
+dat.KM.race <- survfit(Surv(nctdel, fail) ~ race, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.race, main=expression(paste("Kaplan-Meier-estimate ", hat(S)[g](t), " for Race")),
+     xlab="t", ylab="Survival", lwd=2, col=1:3)
+legend(x="topright", col=1:3, lwd=2, legend=c("Black", "Hispanic", "NonBlack/NonHispanic"))
+
+
+dat.KM.gender <- survfit(Surv(nctdel, fail) ~ male, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.gender, main=expression(paste("Kaplan-Meier-estimate ", hat(S)[g](t), " for Male and Female")),
+     xlab="t", ylab="Survival", lwd=2, col=1:2)
+legend(x="topright", col=1:2, lwd=2, legend=c("male", "female"))
+
+
+dat.KM.symptom <- survfit(Surv(nctdel, fail) ~ symptom, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.symptom, main=expression(paste("Kaplan-Meier-estimate ", hat(S)[g](t), " for Clinical Presentation")),
+     xlab="t", ylab="Survival", lwd=2, col=1:4)
+legend(x="topright", col=1:4, lwd=2, legend=c("1", "2", "3", "4"))
+
+
+```
+For further analsysis, this null hypothesis is statistically tested by another test known as log-rank test and Cox proportion hazard test. In log-rank test we calculate the expected number of events in each group. This is how we will move forward in our analysis next week when we begin to build our models.
+
+
+#References
+
 
 http://influentialpoints.com/Training/coxs_proportional_hazards_regression_model-principles-properties-assumptions.htm#modmch
 
