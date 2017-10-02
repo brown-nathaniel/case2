@@ -57,10 +57,10 @@ dat$symptom[dat$sn3==1|dat$all4==1]=3
 ```{r}
 
 g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender))
-g2 <- ggplot(data = dat, aes(x=as.factor(symptom), y=nctdel)) +geom_boxplot()
+g2 <- ggplot(data = dat, aes(x=as.factor(symptom), y=nctdel,color=as.factor(symptom))) +geom_boxplot() +labs(x="symptom",color="symptom")
 g3 <- ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))
-g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=as.factor(symptom)),position = "dodge")
-g3f <- ggplot(data = dat[dat$gender=="female",], aes(x=race)) + geom_bar(aes(fill=as.factor(symptom)),position = "dodge")
+g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=as.factor(symptom)),position = "dodge") + labs(title="Male", fill="symptom")
+g3f <- ggplot(data = dat[dat$gender=="female",], aes(x=race)) + geom_bar(aes(fill=as.factor(symptom)),position = "dodge") + labs(title="Female", fill="symptom")
 
 g1
 ```
