@@ -15,12 +15,6 @@ dat <- read.table("kellydat.txt", header=T)
 ```
 
 #Introduction
-
-The purpose of this project is to investigate the effect of the number of symptoms, gender, and race, on time to neurological assessment. 
-
-Another suggestion for the introduction.  
-
-#Introduction
 These data are from a study of time to critical neurological assessment for patients with stroke-like symptoms who are admitted to the emergency room. We are interested in the factors predictive of the time to critical neurological assessment following admission to the ED for n=335 patients with mild to moderate motor impairment. The goal of the analysis is to perform inferences on the impact of clinical presentation, gender and race on time to neurological assessment where clinical presentation is measured as a count of reported major stroke symptoms, including headache, loss of motor skills or weakness, trouble talking or understanding, and vision problems.
 
 
@@ -42,21 +36,25 @@ sn3|0/1 indicator 3 main symptom| categorical
 all4|0/1 indicator all main sumptoms|categorical 
 
 
-#Exploratory Data Analysis
+
+We note there are no missing values in our data therefore we had no need to clean the data. We did, however, create 3 variables that helped us with our visualizations. Race in our dataset is a 2 level variable (Black/Hispanic and other) which represents all those in the dataset who are Black or Hispanic in one category and non Black and non Hispanic in the other category. We decided to group Black and Hispanic together because there were only 9 Hispanics in the data set which is a small population to draw conclusions upon. We feel it is possible the 9 people are not truly representative of the rest of the population. Next, we created symptom in the data set as well which has 4 levels in the variable. 0 for those who had no symptoms, 1 who had 1 symptom, 2 who had 2 symptoms and 3 for those who had 3 or more symtoms. We groups those patients which 3 or 4 symptoms together because we noted in the data set there were only 6 individuals who had 4 symptoms which is very small a population size to draw any conclusions on.  
+
 ```{r, fig}
 missing_d <- (which(is.na(dat)))
 #dat[missing_d,] # no NA's
 
-dat$race = "Others"
-dat$race[dat$black==1]="Black"
-dat$race[dat$hisp==1]="Hispanic"
+dat$race = "Other"
+dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
 dat$gender = "male"
 dat$gender[dat$male==0]="female"
 dat$symptom = 0
 dat$symptom[dat$sn1==1]=1
 dat$symptom[dat$sn2==1]=2
-dat$symptom[dat$sn3==1]=3
-dat$symptom[dat$all4==1]=4
+dat$symptom[dat$sn3==1|dat$all4==1]=3
+```
+
+#Exploratory Data Analysis
+```{r}
 
 g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender))
 g2 <- ggplot(data = dat, aes(x=as.factor(symptom), y=nctdel)) +geom_boxplot()
@@ -129,8 +127,12 @@ legend(x="topright", col=1:4, lwd=2, legend=c("1", "2", "3", "4"))
 
 
 ```
+
+
 For further analsysis, this null hypothesis is statistically tested by another test known as log-rank test and Cox proportion hazard test. In log-rank test we calculate the expected number of events in each group. This is how we will move forward in our analysis next week when we begin to build our models.
 
+
+#Contributions 
 
 #References
 
