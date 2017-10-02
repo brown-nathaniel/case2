@@ -4,7 +4,7 @@ author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "September 28, 2017"
 output: html_document
 ---
-```{r}
+```{r, warning=FALSE, echo=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE)
 library(ggplot2)
 library(survival)
@@ -37,7 +37,7 @@ all4|0/1 indicator all main sumptoms|categorical
 
 
 
-We note there are no missing values in our data therefore we had no need to clean the data. We did, however, create 3 variables that helped us with our visualizations. Race in our dataset is a 2 level variable (Black/Hispanic and other) which represents all those in the dataset who are Black or Hispanic in one category and non Black and non Hispanic in the other category. We decided to group Black and Hispanic together because there were only 9 Hispanics in the data set which is a small population to draw conclusions upon. We feel it is possible the 9 people are not truly representative of the rest of the population. Next, we created symptom in the data set as well which has 4 levels in the variable. 0 for those who had no symptoms, 1 who had 1 symptom, 2 who had 2 symptoms and 3 for those who had 3 or more symtoms. We groups those patients which 3 or 4 symptoms together because we noted in the data set there were only 6 individuals who had 4 symptoms which is very small a population size to draw any conclusions on.  
+We note there are no missing values in our data therefore we had no need to clean the data. We did, however, create variables that helped us with our visualizations. Race in our dataset is a 2 level variable (Black/Hispanic and other) which represents all those in the dataset who are Black or Hispanic in one category and non Black and non Hispanic in the other category. We decided to group Black and Hispanic together because there were only 9 Hispanics out of 335 observations in the data set which is a small population to draw conclusions upon. We feel it is possible the 9 people are not truly representative of the rest of the population. Next, we created symptom in the data set as well which has 4 levels in the variable. 0 for those who had no symptoms, 1 who had 1 symptom, 2 who had 2 symptoms and 3 for those who had 3 or more symptoms. We groups those patients which 3 or 4 symptoms together because we noted in the data set there were only 6 individuals out of 335 observations in the dataset who had 4 symptoms which is very small a population size to draw any conclusions on.  
 
 ```{r, fig}
 missing_d <- (which(is.na(dat)))
@@ -54,6 +54,8 @@ dat$symptom[dat$sn3==1|dat$all4==1]=3
 ```
 
 #Exploratory Data Analysis
+
+###Data Visualizations
 ```{r}
 
 g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender))
@@ -80,64 +82,80 @@ grid.arrange(g3m, g3f, nrow=2)
 
 This third plot examines the distribution of symptoms between genders and ethnicities. These plots show that people are more likely to arrive with one symptom than any other number, and that the number of symptoms is right skewed. There is no noticeable difference in the distributions between the males and females.
 
-#Analysis and Approach
+
+###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
+
+
+#####Background:
+
+Kaplan-Meier estimate is one of the best options to be used to measure the fraction of subjects living for a certain amount of time. The Kaplan-Meier estimate is also called as "product limit estimate". It involves computing of probabilities of occurrence of event at a certain point of time. Specifically, for each time interval, survival probability is calculated as the number of subjects surviving divided by the number of patients at risk. Subjects who have died, dropped out, or move out are not counted as "at risk" i.e., subjects who are lost are considered "censored" and are not counted in the denominator. Total probability of survival until that time interval is calculated by multiplying all the probabilities of survival at all time intervals preceding that time (by applying law of multiplication of probability to calculate cumulative probability). There are three assumptions used in this analysis. Firstly, we assume that at any time patients who are censored have the same survival prospects as those who continue to be followed. Secondly, we assume that the survival probabilities are the same for subjects recruited early and late in the study. Thirdly, we assume that the event happens at the time specified.
+
+#####Using our graphs: 
+We can compare curves for two different groups of subjects. For example, compare the survival pattern for subjects on a standard therapy with a newer therapy. We can look for gaps in these curves in a horizontal or vertical direction. A vertical gap means that at a specific time point, one group had a greater fraction of subjects surviving. A horizontal gap means that it took longer for one group to experience a certain fraction of deaths.The two survival curves can be compared statistically by testing the null hypothesis i.e. there is no difference regarding survival among two classifications of population.
+
+
+#####Analysis:
+The first graph we created below is the cumlumative density estimation. This curve shows how the entire population in our dataset no matter the race, gender, or clinical condition will survive.The graph also includes an upper and lower 95% confidence interval. Using this graph we know how the population is expected to survive. We can compare this estimated survival curve to the separate estimated survival curve for the difference gender, race, and clincial condition. We will create these separate curves now. 
 
 ```{r}
+dat.KM <- survfit(Surv(nctdel, fail) ~ 1, data = dat) #estimated survival curve 
 
+plot(dat.KM, main=expression(paste("Kaplan-Meier-estimate ", hat(S)(t), " with CI")),
+     xlab="t", ylab="Survival", lwd=2)
 ```
 
 
-Kaplan-Meier Analysis
+Below we see 3 estimate curves for gender (males vs female), race(black and hispanic versus non black and non hispanic), and clinical presentation (1,2, 3 or more symptoms).  
 
-Background:
-Kaplan-Meier estimate is one of the best options to be used to measure the fraction of subjects living for a certain amount of time. The Kaplan-Meier estimate is also called as "product limit estimate". It involves computing of probabilities of occurrence of event at a certain point of time. Specifically, for each time interval, survival probability is calculated as the number of subjects surviving divided by the number of patients at risk. Subjects who have died, dropped out, or move out are not counted as "at risk" i.e., subjects who are lost are considered "censored" and are not counted in the denominator. Total probability of survival until that time interval is calculated by multiplying all the probabilities of survival at all time intervals preceding that time (by applying law of multiplication of probability to calculate cumulative probability). There are three assumptions used in this analysis. Firstly, we assume that at any time patients who are censored have the same survival prospects as those who continue to be followed. Secondly, we assume that the survival probabilities are the same for subjects recruited early and late in the study. Thirdly, we assume that the event happens at the time specified.
+Looking at our Kaplan-Meier estimate for Race we see the survival curves are generally similar in the 0-5 time range. There is a steep decline in percent of the population surviving. After time 5 there is a little different in the survival curves and sometime there is a higher percent of Black/Hispanics surviving compared to Nonblack/nonhispanics and vice versa. The most interesting part of the comparison of curves is when the populations hit 0.The black/hispanic population hits 0% survival between time 15 and 20 while the nonblack/non hispanic population hits 0% suriving population after time 25. This is something to look into in future analysis. 
 
-Using our graphs: 
-We can compare curves for two different groups of subjects. For example, compare the survival pattern for subjects on a standard therapy with a newer therapy. We can look for gaps in these curves in a horizontal or vertical direction. A vertical gap means that at a specific time point, one group had a greater fraction of subjects surviving. A horizontal gap means that it took longer for one group to experience a certain fraction of deaths.
+Next, looking at our Kaplan-Meir estimate for Gender we see a very similar estimation of the survival curve between time 0 and 5 and the populations both hit 0% survival at around the same time after time 25. It is interesting to note though after time 5 higher percent of females are surving than males from this time point forward. This is an interesting point to note and something to look into in the future.
 
-The two survival curves can be compared statistically by testing the null hypothesis i.e. there is no difference regarding survival among two interventions.
+Our final graph is the Kaplan Meier estimate for Clinical Presentation which is the number of symptoms a patient presents. There is difference between the estimated survival curves. First those with no symptoms of stroke have the highest percent of their population suviving for pretty much the entire time. We can see this by noting the black line is above all the other survival curves. It makes the the more symtoms you have the smaller percent of the population will survive over time. This is reflected in the graph when we see 1 symptoms right beneath the 0 symtoms estimate curve. Next is 2 symtoms and the patients with 3 symptoms and up have the smallest percent of their population surving at all time. Next to note is when each of the populations get to 0% of their population dying. 3 or more symtoms dies first with 2 symtoms very close/nearly the same (between time 3-5). It is interesting to see the 1 symptom population dies after the 0 symptom population. 
 
-##insert analysis once I check with Jonathan to make sure this is the right idea 
 
-###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
 ```{r}
-
-dat.KM <- survfit(Surv(nctdel, fail) ~ 1, data = dat) #estimated survival curve 
 
 par(mfrow=c(1,3))
 dat.KM.race <- survfit(Surv(nctdel, fail) ~ race, type="kaplan-meier", conf.type="log", data=dat)
 
-plot(dat.KM.race, main=expression(paste("Kaplan-Meier-estimate ", hat(S)[g](t), " for Race")),
+plot(dat.KM.race, main=expression(paste("KM-Est ", hat(S)[g](t), " for Race")),
      xlab="t", ylab="Survival", lwd=2, col=1:3)
-legend(x="topright", col=1:3, lwd=2, legend=c("Black", "Hispanic", "NonBlack/NonHispanic"))
+legend(x="topright", col=1:2, lwd=2, legend=c("Black/Hisp", "NonBlack/NonHisp"))
 
 
 dat.KM.gender <- survfit(Surv(nctdel, fail) ~ male, type="kaplan-meier", conf.type="log", data=dat)
 
-plot(dat.KM.gender, main=expression(paste("Kaplan-Meier-estimate ", hat(S)[g](t), " for Male and Female")),
+plot(dat.KM.gender, main=expression(paste("KM-Est ", hat(S)[g](t), " for Gender")),
      xlab="t", ylab="Survival", lwd=2, col=1:2)
 legend(x="topright", col=1:2, lwd=2, legend=c("male", "female"))
 
 
 dat.KM.symptom <- survfit(Surv(nctdel, fail) ~ symptom, type="kaplan-meier", conf.type="log", data=dat)
 
-plot(dat.KM.symptom, main=expression(paste("Kaplan-Meier-estimate ", hat(S)[g](t), " for Clinical Presentation")),
+plot(dat.KM.symptom, main=expression(paste("KM-Est ", hat(S)[g](t), " for Clinical Presentation")),
      xlab="t", ylab="Survival", lwd=2, col=1:4)
-legend(x="topright", col=1:4, lwd=2, legend=c("1", "2", "3", "4"))
+legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+up"))
 
 
 ```
 
+In summary, in our EDA about Kaplan Meier estimates, we stated our null hypothesis is the survival curves for different populations will be the same. From our intial explorations we think we will reject the null hypothesis in favor of the alternative that the survival curves will be different for different classifications of a population ie Race, Gender, and Clinical Presentation have an effecct on getting a CT scan. 
 
-For further analsysis, this null hypothesis is statistically tested by another test known as log-rank test and Cox proportion hazard test. In log-rank test we calculate the expected number of events in each group. This is how we will move forward in our analysis next week when we begin to build our models.
+#Approach for analyzing 
+
+For further analysis next week, our null hypothesese can be statistically tested by another test known as log-rank test and Cox proportion hazard test. In log-rank test we calculate the expected number of events in each group. This is how we will move forward in our analysis next week when we begin to build our models.
 
 
 #Contributions 
+For this paper Sarah wrote the introduction, variable exploration section, and created/analyzed the Kaplan-Meier survival curves. 
 
 #References
 
-
 http://influentialpoints.com/Training/coxs_proportional_hazards_regression_model-principles-properties-assumptions.htm#modmch
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3059453/
+http://dwoll.de/rexrepos/posts/survivalKM.html
+
 
 These are the assumptions for Cox regression according to the link: 
 
