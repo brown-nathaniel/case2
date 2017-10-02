@@ -84,6 +84,9 @@ The two survival curves can be compared statistically by testing the null hypoth
 
 ###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
 ```{r}
+
+dat.KM <- survfit(Surv(nctdel, fail) ~ 1, data = dat) #estimated survival curve 
+
 par(mfrow=c(1,3))
 dat.KM.race <- survfit(Surv(nctdel, fail) ~ race, type="kaplan-meier", conf.type="log", data=dat)
 
