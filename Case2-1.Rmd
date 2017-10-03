@@ -157,6 +157,7 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3059453/
 http://dwoll.de/rexrepos/posts/survivalKM.html
 
 
+<!--
 These are the assumptions for Cox regression according to the link: 
 
 1.    The mechanisms giving rise to censoring of individuals must not be related to the probability of an event occurring. This assumption is known as non-informative censoring and applies for nearly all forms of survival analysis.
@@ -164,3 +165,5 @@ These are the assumptions for Cox regression according to the link:
 2.    Survival curves for different strata must have hazard functions that are proportional over time. This is the proportional hazards assumption discussed above for a single explanatory variable and for the multivariate model.
 
 3.    There should be a linear relationship between the log hazard and each covariate. This is best checked using residual plots
+
+-->
