@@ -47,10 +47,10 @@ dat$race = "Other"
 dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
 dat$gender = "male"
 dat$gender[dat$male==0]="female"
-dat$symptom = 0
-dat$symptom[dat$sn1==1]=1
-dat$symptom[dat$sn2==1]=2
-dat$symptom[dat$sn3==1|dat$all4==1]=3
+dat$symptom = "0"
+dat$symptom[dat$sn1==1]="1"
+dat$symptom[dat$sn2==1]="2"
+dat$symptom[dat$sn3==1|dat$all4==1]="3+"
 ```
 
 #Exploratory Data Analysis
@@ -59,28 +59,28 @@ dat$symptom[dat$sn3==1|dat$all4==1]=3
 ```{r}
 
 g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender))
-g2 <- ggplot(data = dat, aes(x=as.factor(symptom), y=nctdel,color=as.factor(symptom))) +geom_boxplot() +labs(x="symptom",color="symptom")
+g2 <- ggplot(data = dat, aes(x=symptom, y=nctdel,color=symptom)) +geom_boxplot() 
 g3 <- ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))
-g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=as.factor(symptom)),position = "dodge") + labs(title="Male", fill="symptom")
-g3f <- ggplot(data = dat[dat$gender=="female",], aes(x=race)) + geom_bar(aes(fill=as.factor(symptom)),position = "dodge") + labs(title="Female", fill="symptom")
+g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Male", fill="symptom")
+g3f <- ggplot(data = dat[dat$gender=="female",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Female", fill="symptom")
 
 g1
 ```
 
-In these boxplots, we see that the median times to treatment are similar across all ethnic and gender groups. However, it is notable that hispanic males have a higher spread of in their times to treatment. This high variance can be attributed to the small sample size of only  hispanic males in the study.
+There is no significant difference in the median times to treatment between ethnic and gender groups. However, non-Black and non-Hispanic group have higher variance compared to the Black or Hispanic group. 
 
 ```{r}
 p2 <- summary(aov(data=dat, nctdel ~ symptom))[[1]][["Pr(>F)"]][1]
 g2 + labs(caption = paste("p-value:", round(p2,4)))
 ```
 
-This next plot shows that there is a difference in the distribution of time to treatment depending on the number of symptoms one shows. The median wait times are all similar, but the quartiles show that the distribution of times for people showing four symptoms is more concentrated than for the other groups.
+There is a difference in the distribution of time to treatment depending on the number of symptoms one shows. The median wait times are similar; however, the quantiles show that the distribution tends to be concentrated for the group with more symptoms.
 
 ```{r}
 grid.arrange(g3m, g3f, nrow=2)
 ```
 
-This third plot examines the distribution of symptoms between genders and ethnicities. These plots show that people are more likely to arrive with one symptom than any other number, and that the number of symptoms is right skewed. There is no noticeable difference in the distributions between the males and females.
+We now examine the distribution of symptoms between genders and ethnicities. People are most likely to arrive with one symptom than any other number, and the number of symptoms is right skewed. There is no noticeable difference in the distributions between the males and females.
 
 
 ###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
@@ -88,7 +88,7 @@ This third plot examines the distribution of symptoms between genders and ethnic
 
 #####Background:
 
-Kaplan-Meier estimate is one of the best options to be used to measure the fraction of subjects living for a certain amount of time. The Kaplan-Meier estimate is also called as "product limit estimate". It involves computing of probabilities of occurrence of event at a certain point of time. Specifically, for each time interval, survival probability is calculated as the number of subjects surviving divided by the number of patients at risk. Subjects who have died, dropped out, or move out are not counted as "at risk" i.e., subjects who are lost are considered "censored" and are not counted in the denominator. Total probability of survival until that time interval is calculated by multiplying all the probabilities of survival at all time intervals preceding that time (by applying law of multiplication of probability to calculate cumulative probability). There are three assumptions used in this analysis. Firstly, we assume that at any time patients who are censored have the same survival prospects as those who continue to be followed. Secondly, we assume that the survival probabilities are the same for subjects recruited early and late in the study. Thirdly, we assume that the event happens at the time specified.
+Kaplan-Meier estimate is one of the best options to use to measure the fraction of subjects living for a certain amount of time. The Kaplan-Meier estimate is also called as "product limit estimate". It involves computing of probabilities of occurrence of event at a certain point of time. Specifically, for each time interval, survival probability is calculated as the number of subjects surviving divided by the number of patients at risk. Subjects who have died, dropped out, or move out are not counted as "at risk" i.e., subjects who are lost are considered "censored" and are not counted in the denominator. Total probability of survival until that time interval is calculated by multiplying all the probabilities of survival at all time intervals preceding that time (by applying law of multiplication of probability to calculate cumulative probability). There are three assumptions used in this analysis. Firstly, we assume that at any time patients who are censored have the same survival prospects as those who continue to be followed. Secondly, we assume that the survival probabilities are the same for subjects recruited early and late in the study. Thirdly, we assume that the event happens at the time specified.
 
 #####Using our graphs: 
 We can compare curves for two different groups of subjects. For example, compare the survival pattern for subjects on a standard therapy with a newer therapy. We can look for gaps in these curves in a horizontal or vertical direction. A vertical gap means that at a specific time point, one group had a greater fraction of subjects surviving. A horizontal gap means that it took longer for one group to experience a certain fraction of deaths.The two survival curves can be compared statistically by testing the null hypothesis i.e. there is no difference regarding survival among two classifications of population.
