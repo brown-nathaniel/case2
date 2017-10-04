@@ -37,7 +37,23 @@ sn2|0/1 indicator 2 main symptom| categorical
 sn3|0/1 indicator 3 main symptom| categorical
 all4|0/1 indicator all main sumptoms|categorical 
 
+```{r, echo=F}
+pdat = dat[,1:2]
+pdat$race = "Others"
+pdat$race[dat$black==1]="Black"
+pdat$race[dat$hisp==1]="Hispanic"
+pdat$gender = "male"
+pdat$gender[dat$male==0]="female"
+pdat$symptom = "0"
+pdat$symptom[dat$sn1==1]="1"
+pdat$symptom[dat$sn2==1]="2"
+pdat$symptom[dat$sn3==1]="3"
+pdat$symptom[dat$all4==1]="4"
 
+p1<- ggplot(data = pdat, aes(x=race, fill=race)) + geom_bar() + theme_bw()
+p2<- ggplot(data = pdat, aes(x=symptom, fill=symptom)) + geom_bar() + theme_bw()
+grid.arrange(p1, p2, ncol=2)
+```
 
 There are no missing values or apparently out of range values in our data, and therefore we had no need to clean the data. However, we created variables to better visualize the data. Race is a 2-level variable (Black/Hispanic and Other) which represents all those in the dataset who are Black or Hispanic in one category and non-Black and non-Hispanic in the other. We decided to group Black and Hispanic together because Blacks and Hispanics had relatively small sample sizes, constituting 97 out of 335 patients observed. Particularly, there were only 9 Hispanics, which is a population too small to represent the group and therefore difficult to draw conclusions upon. Next, symptom is a 4 level variable: "0" for those who had no symptoms, "1" for those who had 1 symptom, "2" for those who had 2 symptoms, and "3+" for those who had 3 or more symptoms. We grouped those patients which 3 or 4 symptoms together because there were only 6 individuals out of 335 observations in the dataset who had 4 symptoms, which is very small a population size to draw any conclusions on.  
 
@@ -53,41 +69,49 @@ dat$symptom = "0"
 dat$symptom[dat$sn1==1]="1"
 dat$symptom[dat$sn2==1]="2"
 dat$symptom[dat$sn3==1|dat$all4==1]="3+"
+dat$scan="not scanned"
+dat$scan[dat$fail==1]="scanned"
 ```
 
 #Exploratory Data Analysis
 
 ###Data Visualizations
-```{r}
+```{r, echo=F}
 
-g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender)) + labs(y = "Time to Assesment", x = "Race", fill = "Gender")
+g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender)) + labs(y = "Time to Assesment", x = "Race", fill = "Gender")+theme_bw()
 
-g2 <- ggplot(data = dat, aes(x=symptom, y=nctdel,color=symptom)) +geom_boxplot() + labs(y = "Time to Assesment", x = "Number of Symptoms") + theme(legend.position = "None")
+g2 <- ggplot(data = dat, aes(x=symptom, y=nctdel)) +geom_boxplot(aes(fill=symptom)) + labs(y = "Time to Assesment", x = "Number of Symptoms", fill="Number of Symptoms") + theme(legend.position = "None")+theme_bw()
 
-g3 <- ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))
+g3 <- ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))+theme_bw()
 
-g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Male", fill="Number of Symptoms", y = "Frequency", x = "Race")
+g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Male", fill="Number of Symptoms", y = "Frequency", x = "Race")+theme_bw()
 
-g3f <- ggplot(data = dat[dat$gender=="female",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Female", fill="Number of Symptoms", y = "Frequency", x = "Race")
+g3f <- ggplot(data = dat[dat$gender=="female",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Female", fill="Number of Symptoms", y = "Frequency", x = "Race")+theme_bw()
 
 g1
 ```
 
-There is no visible difference in the median times to treatment between ethnic and gender groups. However, we se that non-Black and non-Hispanic group have higher variance compared to the Black or Hispanic group. 
+There is no visible difference in the median times to treatment between ethnic and gender groups. However, we see that non-Black and non-Hispanic group have higher variance compared to the Black or Hispanic group. 
 
-```{r}
+```{r,echo=F}
 p2 <- summary(aov(data=dat, nctdel ~ symptom))[[1]][["Pr(>F)"]][1]
 g2 + labs(caption = paste("p-value:", round(p2,4)))
 ```
 
 These boxplots illustrate the different distributions of time to treatment by the number of symptoms one shows. The median wait times are similar, as well as the means according to an ANOVA test for equal means between the four groups (p=`r round(p2,4)`). However, the quantiles show that the distribution tends to be concentrated for the group with more symptoms. 
 
-```{r}
+```{r,echo=F}
 grid.arrange(g3m, g3f, nrow=2)
 ```
 
 We now examine the distribution of symptoms between genders and ethnicities. People, regardless of ethnicity, are most likely to arrive with one symptom than any other number, and the number of symptoms is right skewed. There is no noticeable difference in the distributions between the males and females.
-
+```{r,echo=F}
+p3<-ggplot(data = dat, aes(x=race))+geom_bar(aes(fill=scan), position="dodge")+theme_bw()+labs(x="Race",y="Frequency",fill="Scanned or Not")
+p4<-ggplot(data = dat, aes(x=symptom)) +geom_bar(aes(fill=scan), position="dodge") +theme_bw()+labs(x="Number of Symptoms", y="Frequency", fill="Scanned or Not")
+p5<-ggplot(data = dat, aes(x=gender))+geom_bar(aes(fill=scan),position="dodge")+theme_bw()+labs(x="Gender", y="Frequency", fill="Scanned or Not")
+grid.arrange(p3, p4,p5, nrow=3)
+```
+Lastly, we observe the number of people from each group who got neurological/CT scan and who did not. We see that the proportion of the patients who got CT scan is similar across race and gender, while the patients who showed 1 major stroke symptom are more likely to get CT scan than patients with less or more stroke symptoms.
 
 ###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
 
@@ -156,7 +180,7 @@ For further analysis next week, our null hypothesese can be statistically tested
 
 
 #Contributions 
-For this paper Sarah wrote the introduction, variable exploration section, and created/analyzed the Kaplan-Meier survival curves. Nathaniel worked on the interpretation of the Kaplan-Meier curves, and finalized the plots with details such as axis labels.
+For this paper Sarah wrote the introduction, variable exploration section, and created/analyzed the Kaplan-Meier survival curves. Nathaniel worked on the interpretation of the Kaplan-Meier curves, and finalized the plots with details such as axis labels. Inhee worked on data visualizations, variable exploration, and exploratory data analysis, and edited the report. 
 
 #References
 
