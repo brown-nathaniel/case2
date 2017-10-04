@@ -11,10 +11,9 @@ knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
 library(ggplot2)
 library(survival)
 library(gridExtra)
-library(dplyr)
+library(scales)
 
 dat <- read.table("kellydat.txt", header=T)
-
 ```
 
 #Introduction
@@ -72,9 +71,6 @@ dat$symptom[dat$sn2==1]="2"
 dat$symptom[dat$sn3==1|dat$all4==1]="3+"
 dat$scan="not scanned"
 dat$scan[dat$fail==1]="scanned"
-dat = dat %>% group_by(race) %>% mutate(racescan = ifelse(fail == 1, mean(fail), 1-mean(fail)))
-dat = dat %>% group_by(symptom) %>% mutate(symptomscan = ifelse(fail == 1, mean(fail), 1-mean(fail)))
-dat = dat %>% group_by(gender) %>% mutate(genderscan = ifelse(fail == 1, mean(fail), 1-mean(fail))) %>% as.data.frame()
 ```
 
 #Exploratory Data Analysis
@@ -108,11 +104,10 @@ grid.arrange(g3m, g3f, nrow=2)
 
 We now examine the distribution of symptoms between genders and ethnicities. People, regardless of ethnicity, are most likely to arrive with one symptom than any other number, and the number of symptoms is right skewed. There is no noticeable difference in the distributions between the males and females.
 ```{r,echo=F,fig.height=6,fig.align='center'}
-ylim <- scale_y_continuous(limits = c(0,1))
-p3<-ggplot(data = dat, aes(x=race, y=racescan))+geom_col(width = 0.25, position="dodge", fill = "dark green")+theme_bw()+labs(x="Race",y="Proportion",fill="Scanned or Not", title ="Proportion of Patients Who Saw Neurologist by Group") + theme(plot.title = element_text(size=15, hjust = 0.5)) + ylim
-p4<-ggplot(data = dat, aes(x=symptom, y=symptomscan)) +geom_col(width=0.5, position="dodge", fill = "red") +theme_bw()+labs(x="Number of Symptoms", y="Proportion", fill="Scanned or Not") + ylim
-p5<-ggplot(data = dat, aes(x=gender, y=genderscan))+ geom_col(width=0.25,position="dodge", fill="blue")+theme_bw()+labs(x="Gender", y="Proportion", fill="Scanned or Not") + ylim
-grid.arrange(p3, p5,p4, nrow=3)
+p3<-ggplot(data = dat, aes(x=race,fill=scan))+geom_bar(position="fill") +theme_bw()+ labs(x="Race",y="Percentage",fill="Scanned or Not",title ="Proportion of Patients Who Saw Neurologist by Group") + theme(plot.title = element_text(size=12, hjust = 0.5)) +scale_y_continuous(labels=percent_format())
+p4<-ggplot(data = dat, aes(x=symptom,fill=scan)) +geom_bar(position="fill") +theme_bw()+labs(x="Number of Symptoms", y="Percentage", fill="Scanned or Not",title ="Proportion of Patients Who Saw Neurologist by Group") + theme(plot.title = element_text(size=12, hjust = 0.5))+scale_y_continuous(labels=percent_format())
+p5<-ggplot(data = dat, aes(x=gender,fill=scan))+geom_bar(position="fill") +theme_bw()+ labs(x="Gender",y="Percentage",fill="Scanned or Not",title ="Proportion of Patients Who Saw Neurologist by Group") + theme(plot.title = element_text(size=12, hjust = 0.5))+scale_y_continuous(labels=percent_format())
+grid.arrange(p3, p4,p5, nrow=3)
 ```
 Lastly, we observe the proportion of people from each group who got to see a neurologist or got a CT scan and who did not. We see that the proportion of the patients who got CT scan is similar across race and gender, while the patients who showed 3 or more major stroke symptoms are more likely to get a CT scan than patients with fewer stroke symptoms. It is also interesting to note that with 1 symptom are more likely to receive a scan than patients with 2.
 
