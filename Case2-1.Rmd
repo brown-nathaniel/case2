@@ -178,7 +178,7 @@ For further analysis next week, our null hypothesese can be statistically tested
 
 
 #Contributions 
-For this paper Sarah wrote the introduction, variable exploration section, and created/analyzed the Kaplan-Meier survival curves. Nathaniel worked on the interpretation of the Kaplan-Meier curves, and finalized the plots with details such as axis labels. Inhee worked on data visualizations, variable exploration, and exploratory data analysis, and edited the report. 
+For this paper Sarah wrote the introduction, variable exploration section, and created/analyzed the Kaplan-Meier survival curves. Nathaniel worked on the interpretation of the Kaplan-Meier curves, and finalized the plots with details such as axis labels. Inhee worked on data visualizations, variable exploration, and exploratory data analysis, and edited the entire report. 
 \pagebreak
 
 #References
