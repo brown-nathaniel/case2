@@ -37,7 +37,7 @@ sn2|0/1 indicator 2 main symptom| categorical
 sn3|0/1 indicator 3 main symptom| categorical
 all4|0/1 indicator all main sumptoms|categorical 
 
-```{r, echo=F}
+```{r, echo=F, fig.height=2.5, fig.width=6, fig.align='center'}
 pdat = dat[,1:2]
 pdat$race = "Others"
 pdat$race[dat$black==1]="Black"
@@ -50,8 +50,8 @@ pdat$symptom[dat$sn2==1]="2"
 pdat$symptom[dat$sn3==1]="3"
 pdat$symptom[dat$all4==1]="4"
 
-p1<- ggplot(data = pdat, aes(x=race, fill=race)) + geom_bar() + theme_bw()
-p2<- ggplot(data = pdat, aes(x=symptom, fill=symptom)) + geom_bar() + theme_bw()
+p1<- ggplot(data = pdat, aes(x=race, fill=race)) + geom_bar() + theme_bw()+labs(x="Race", y="Frequency",fill="")
+p2<- ggplot(data = pdat, aes(x=symptom, fill=symptom)) + geom_bar() + theme_bw()+labs(x="Number of Symptoms", y="Frequency", fill="")
 grid.arrange(p1, p2, ncol=2)
 ```
 
@@ -76,13 +76,11 @@ dat$scan[dat$fail==1]="scanned"
 #Exploratory Data Analysis
 
 ###Data Visualizations
-```{r, echo=F}
+```{r, echo=F, fig.height=3, fig.width=5, fig.align='center'}
 
 g1 <- ggplot(data = dat, aes(x=race,y=nctdel)) + geom_boxplot(aes(fill=gender)) + labs(y = "Time to Assesment", x = "Race", fill = "Gender")+theme_bw()
 
 g2 <- ggplot(data = dat, aes(x=symptom, y=nctdel)) +geom_boxplot(aes(fill=symptom)) + labs(y = "Time to Assesment", x = "Number of Symptoms", fill="Number of Symptoms") + theme(legend.position = "None")+theme_bw()
-
-g3 <- ggplot(data = dat, aes(x=race, y=symptom)) + geom_boxplot(aes(fill=gender))+theme_bw()
 
 g3m <- ggplot(data = dat[dat$gender=="male",], aes(x=race)) + geom_bar(aes(fill=symptom),position = "dodge") + labs(title="Male", fill="Number of Symptoms", y = "Frequency", x = "Race")+theme_bw()
 
@@ -93,19 +91,19 @@ g1
 
 There is no visible difference in the median times to treatment between ethnic and gender groups. However, we see that non-Black and non-Hispanic group have higher variance compared to the Black or Hispanic group. 
 
-```{r,echo=F}
+```{r,echo=F,fig.height=3, fig.width=6, fig.align='center'}
 p2 <- summary(aov(data=dat, nctdel ~ symptom))[[1]][["Pr(>F)"]][1]
 g2 + labs(caption = paste("p-value:", round(p2,4)))
 ```
 
 These boxplots illustrate the different distributions of time to treatment by the number of symptoms one shows. The median wait times are similar, as well as the means according to an ANOVA test for equal means between the four groups (p=`r round(p2,4)`). However, the quantiles show that the distribution tends to be concentrated for the group with more symptoms. 
 
-```{r,echo=F}
+```{r,echo=F, fig.height=3.5,fig.width=5,fig.align='center'}
 grid.arrange(g3m, g3f, nrow=2)
 ```
 
 We now examine the distribution of symptoms between genders and ethnicities. People, regardless of ethnicity, are most likely to arrive with one symptom than any other number, and the number of symptoms is right skewed. There is no noticeable difference in the distributions between the males and females.
-```{r,echo=F}
+```{r,echo=F,fig.height=3.5,fig.width=5,fig.align='center'}
 p3<-ggplot(data = dat, aes(x=race))+geom_bar(aes(fill=scan), position="dodge")+theme_bw()+labs(x="Race",y="Frequency",fill="Scanned or Not")
 p4<-ggplot(data = dat, aes(x=symptom)) +geom_bar(aes(fill=scan), position="dodge") +theme_bw()+labs(x="Number of Symptoms", y="Frequency", fill="Scanned or Not")
 p5<-ggplot(data = dat, aes(x=gender))+geom_bar(aes(fill=scan),position="dodge")+theme_bw()+labs(x="Gender", y="Frequency", fill="Scanned or Not")
@@ -181,6 +179,7 @@ For further analysis next week, our null hypothesese can be statistically tested
 
 #Contributions 
 For this paper Sarah wrote the introduction, variable exploration section, and created/analyzed the Kaplan-Meier survival curves. Nathaniel worked on the interpretation of the Kaplan-Meier curves, and finalized the plots with details such as axis labels. Inhee worked on data visualizations, variable exploration, and exploratory data analysis, and edited the report. 
+\pagebreak
 
 #References
 
