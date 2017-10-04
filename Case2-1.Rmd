@@ -80,7 +80,7 @@ p2 <- summary(aov(data=dat, nctdel ~ symptom))[[1]][["Pr(>F)"]][1]
 g2 + labs(caption = paste("p-value:", round(p2,4)))
 ```
 
-These boxplots illustrate the different distributions of time to treatment by the number of symptoms one shows. The median wait times are similar, as well as the means occording to an ANOVA test for equal means between the four groups (p=`r round(p2,4)`). However, the quantiles show that the distribution tends to be concentrated for the group with more symptoms. 
+These boxplots illustrate the different distributions of time to treatment by the number of symptoms one shows. The median wait times are similar, as well as the means according to an ANOVA test for equal means between the four groups (p=`r round(p2,4)`). However, the quantiles show that the distribution tends to be concentrated for the group with more symptoms. 
 
 ```{r}
 grid.arrange(g3m, g3f, nrow=2)
