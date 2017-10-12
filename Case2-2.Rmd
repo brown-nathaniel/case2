@@ -1,0 +1,107 @@
+---
+title: "Case Study 2, Pt. 2"
+author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
+date: "October 18, 2017"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
+library(ggplot2)
+library(survival)
+library(gridExtra)
+library(dplyr)
+
+dat <- read.table("kellydat.txt", header=T)
+
+```
+
+```{r, fig}
+dat$race = "Other"
+dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
+dat$gender = "male"
+dat$gender[dat$male==0]="female"
+dat$symptom = "0"
+dat$symptom[dat$sn1==1]="1"
+dat$symptom[dat$sn2==1]="2"
+dat$symptom[dat$sn3==1|dat$all4==1]="3+"
+dat$scan="not scanned"
+dat$scan[dat$fail==1]="scanned"
+dat = dat %>% group_by(race) %>% mutate(racescan = ifelse(fail == 1, mean(fail), 1-mean(fail)))
+dat = dat %>% group_by(symptom) %>% mutate(symptomscan = ifelse(fail == 1, mean(fail), 1-mean(fail)))
+dat = dat %>% group_by(gender) %>% mutate(genderscan = ifelse(fail == 1, mean(fail), 1-mean(fail))) %>% as.data.frame()
+```
+
+###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
+
+```{r}
+dat.KM <- survfit(Surv(nctdel, fail) ~ 1, data = dat) #estimated survival curve 
+
+plot(dat.KM, main=expression(paste("Kaplan-Meier Estimate ", hat(S)(t), " with CI")),
+     xlab="t", ylab="Survival", lwd=2)
+```
+
+```{r}
+
+par(mfrow=c(1,3))
+dat.KM.race <- survfit(Surv(nctdel, fail) ~ race, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.race, main=expression(paste("KM-Est ", hat(S)[g](t), " for Race")),
+     xlab="t", ylab="Survival", lwd=2, col=1:3, cex.main=0.9)
+legend(x="topright", col=1:2, lwd=2, legend=c("Black/Hisp", "Other"))
+
+
+dat.KM.gender <- survfit(Surv(nctdel, fail) ~ male, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.gender, main=expression(paste("KM-Est ", hat(S)[g](t), " for Gender")),
+     xlab="t", ylab="Survival", lwd=2, col=1:2, cex.main=0.9)
+legend(x="topright", col=1:2, lwd=2, legend=c("male", "female"))
+
+
+dat.KM.symptom <- survfit(Surv(nctdel, fail) ~ symptom, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.symptom, main=expression(paste("KM-Est ", hat(S)[g](t), " for Clinical Presentation")),
+     xlab="t", ylab="Survival", lwd=2, col=1:4, cex.main=0.9)
+legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
+
+
+```
+
+
+### Logistic Regression
+```{r logit}
+
+# is.between <- function(x, a, b){
+#   nums[x>c(nums) & x<=c(nums,Inf)]
+# }
+# uppertimes <- 1:ceiling(max(dat$nctdel)) #upper bounds for time categories
+
+dat$timecat <- ceiling(dat$nctdel)
+dat$timecat[dat$timecat==0] <- 1
+  
+datcat$time <- ceiling(datcat$nctdel)
+datcat
+```
+
+#References
+
+http://influentialpoints.com/Training/coxs_proportional_hazards_regression_model-principles-properties-assumptions.htm#modmch
+
+
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3059453/
+
+
+http://dwoll.de/rexrepos/posts/survivalKM.html
+
+
+<!--
+These are the assumptions for Cox regression according to the link: 
+
+1.    The mechanisms giving rise to censoring of individuals must not be related to the probability of an event occurring. This assumption is known as non-informative censoring and applies for nearly all forms of survival analysis.
+
+2.    Survival curves for different strata must have hazard functions that are proportional over time. This is the proportional hazards assumption discussed above for a single explanatory variable and for the multivariate model.
+
+3.    There should be a linear relationship between the log hazard and each covariate. This is best checked using residual plots
+
+-->
