@@ -1,4 +1,4 @@
----
+ ---
 title: "Case Study 2, Pt. 2"
 author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "October 18, 2017"
@@ -12,6 +12,7 @@ library(ggplot2)
 library(survival)
 library(gridExtra)
 library(dplyr)
+library(survminer)
 
 dat <- read.table("kellydat.txt", header=T)
 
@@ -84,6 +85,56 @@ datcat$time <- ceiling(datcat$nctdel)
 datcat
 ```
 
+
+```{r}
+ 
+fitCPH_gender<- coxph(Surv(nctdel, fail) ~ gender, data=dat)
+summary(fitCPH_gender)
+
+
+#diagnostics
+extractAIC(fitCPH_gender)
+
+ggcoxdiagnostics(fitCPH_gender, type = "dfbeta",
+                 linear.predictions = FALSE, ggtheme = theme_bw())#influential points
+ggcoxdiagnostics(fitCPH_gender, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw()) #residuals
+#ggcoxfunctional(Surv(nctdel, fail) ~ gender, data=dat) #linearity 
+
+```
+
+```{r}
+fitCPH_race<- coxph(Surv(nctdel, fail) ~ race, data=dat)
+summary(fitCPH_race)
+extractAIC(fitCPH_race)
+
+
+ggcoxdiagnostics(fitCPH_race, type = "dfbeta",
+                 linear.predictions = FALSE, ggtheme = theme_bw())#influential points
+ggcoxdiagnostics(fitCPH_race, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw()) #residuals
+#ggcoxfunctional(Surv(nctdel, fail) ~ race, data=dat) #linearity 
+
+
+```
+
+
+```{r}
+
+fitCPH_symptom<- coxph(Surv(nctdel, fail) ~ symptom, data=dat)
+summary(fitCPH_symptom)
+extractAIC(fitCPH_symptom)
+
+
+ggcoxdiagnostics(fitCPH_symptom, type = "dfbeta",
+                 linear.predictions = FALSE, ggtheme = theme_bw())#influential points
+ggcoxdiagnostics(fitCPH_symptom, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw()) #residuals
+#ggcoxfunctional(Surv(nctdel, fail) ~ symptom, data=dat) #linearity 
+
+```
+
+
 #References
 
 http://influentialpoints.com/Training/coxs_proportional_hazards_regression_model-principles-properties-assumptions.htm#modmch
@@ -93,6 +144,8 @@ https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3059453/
 
 
 http://dwoll.de/rexrepos/posts/survivalKM.html
+
+http://www.sthda.com/english/wiki/cox-model-assumptions 
 
 
 <!--
