@@ -12,7 +12,7 @@ library(ggplot2)
 library(survival)
 library(gridExtra)
 library(dplyr)
-
+library(reshape2)
 dat <- read.table("kellydat.txt", header=T)
 
 ```
@@ -72,16 +72,40 @@ legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
 ### Logistic Regression
 ```{r logit}
 
-# is.between <- function(x, a, b){
-#   nums[x>c(nums) & x<=c(nums,Inf)]
-# }
-# uppertimes <- 1:ceiling(max(dat$nctdel)) #upper bounds for time categories
+lower_bound <- function(x, bounds){
+  ret <- rep(NA, length(x))
+  for(i in 1:length(x)){
+    xi <- x[i]
+    found <- (which(xi >= c(-Inf, bounds) & (xi <= c(bounds, Inf))))[1] - 1
+    if(found==0){found<-1}
+    ret[i] <- bounds[found]
+  }
+  return(ret)
+}
 
-dat$timecat <- ceiling(dat$nctdel)
-dat$timecat[dat$timecat==0] <- 1
-  
-datcat$time <- ceiling(datcat$nctdel)
-datcat
+bounds <- seq(0, floor(max(dat$nctdel)))
+
+dat$timecat <- lower_bound(dat$nctdel, bounds)
+dat$personid <- 1:nrow(dat)
+datcat <- merge(dat$personid, bounds) %>% 
+          unique() %>% 
+          rename(personid=x, timecat=y) %>% 
+          arrange(personid, timecat) %>% 
+            #take all unique combinations of people and time categories
+          merge(dat, by=c("personid", "timecat"), all=TRUE) %>%
+          #select(personid, timecat, fail) %>%
+          mutate(fail = ifelse(is.na(fail), 0, fail)) %>%
+            #add fail column
+          group_by(personid) %>%
+          mutate(maxtimecat = max(timecat[fail==1]),
+                 atrisk = (fail==1 | timecat < maxtimecat)) %>%
+            #for each person, identify rows where persons are not at risk (after they fail), and remove those rows
+          filter(atrisk) %>%
+          select(personid, timecat, fail) %>%
+          as.data.frame()
+
+
+dcast(test, personid ~ timecat, fun.aggregate = seq, from=1, to=timecat)
 ```
 
 #References
