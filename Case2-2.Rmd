@@ -98,19 +98,23 @@ datcat <- merge(dat$personid, bounds) %>%
           arrange(personid, timecat) %>% 
             #take all unique combinations of people and time categories
           merge(dat, by=c("personid", "timecat"), all=TRUE) %>%
-          #select(personid, timecat, fail) %>%
           mutate(fail = ifelse(is.na(fail), 0, fail)) %>%
             #add fail column
           group_by(personid) %>%
-          mutate(maxtimecat = max(timecat[fail==1]),
-                 atrisk = (fail==1 | timecat < maxtimecat)) %>%
-            #for each person, identify rows where persons are not at risk (after they fail), and remove those rows
+          mutate(maxtimecat = (timecat)[!is.na(nctdel)],
+                 atrisk = (timecat <= maxtimecat)) %>%
           filter(atrisk) %>%
+            #for each person, identify rows where persons are not at risk (after they fail/drop out), and remove those rows
           select(personid, timecat, fail) %>%
           as.data.frame()
 
+ids <- c(229)
+dat %>% filter(personid %in% ids) %>% select(personid, timecat, fail)
+datcat %>% filter(personid %in% ids)
 
-dcast(test, personid ~ timecat, fun.aggregate = seq, from=1, to=timecat)
+
+logreg1 <- glm(fail ~ timecat, data=datcat, family="binomial")
+#not sure how to incorporate columns X1, ..., XT
 ```
 
 
