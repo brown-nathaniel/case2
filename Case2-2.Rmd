@@ -1,4 +1,4 @@
- ---
+---
 title: "Case Study 2, Pt. 2"
 author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "October 18, 2017"
@@ -6,23 +6,29 @@ output:
   pdf_document: default
   html_document: default
 ---
+
+<!-- 
+PLANS:
+  Sarah does cox thing
+  
+  Nathaniel does 
+
+-->
+
+
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
 library(ggplot2)
 library(survival)
 library(gridExtra)
 library(dplyr)
-<<<<<<< HEAD
 library(survminer)
-
-=======
-library(reshape2)
->>>>>>> 7b739055c541e38e81ee38b93cc7067fcb375709
-dat <- read.table("kellydat.txt", header=T)
+library(glmnet)
 
 ```
 
 ```{r, fig}
+dat <- read.table("kellydat.txt", header=T)
 dat$race = "Other"
 dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
 dat$gender = "male"
@@ -88,6 +94,11 @@ lower_bound <- function(x, bounds){
   return(ret)
 }
 
+de_logit <- function(logodds){
+  o <- exp(logodds)
+  p <- o/(1+o)
+  return(p)
+}
 bounds <- seq(0, floor(max(dat$nctdel)))
 
 dat$timecat <- lower_bound(dat$nctdel, bounds)
@@ -108,13 +119,73 @@ datcat <- merge(dat$personid, bounds) %>%
           select(personid, timecat, fail) %>%
           as.data.frame()
 
-ids <- c(229)
-dat %>% filter(personid %in% ids) %>% select(personid, timecat, fail)
-datcat %>% filter(personid %in% ids)
+#code to add predictors of race, gender, and number of symptoms
+datcat <- merge(datcat, dat, by="personid", all=T) %>% 
+          mutate(symptom0 = ifelse(symptom == 0, 1, 0),
+                 symptom1 = ifelse(symptom == 1, 1, 0),
+                 symptom2 = ifelse(symptom == 2, 1, 0),
+                 raceother = ifelse(race == "Other", 1, 0), 
+                 male = ifelse(gender == "male", 1, 0), 
+                 personid = as.integer(personid), 
+                 timecat = as.integer(timecat.x), 
+                 fail = as.integer(fail.x)) %>% 
+          select(personid, timecat = timecat, fail = fail, symptom0, symptom1, symptom2, raceother, male)
+
+#code to add indicator effects of every timeunit
+Xmat <- array(0, c(nrow(datcat), length(bounds)))
+# previd <- NA
+# changes <- c(diff(datcat$personid), 1) #a 1 marks the final index of each personid
+# counts <- data.frame(x = datcat$personid) %>% group_by(x) %>% mutate(n=n()) %>% '[['("n")
+
+for(r in 1:nrow(datcat)){
+  Xmat[r,datcat$timecat[r]+1] <- 1
+}
+
+colnames(Xmat) <- paste0("X",1:ncol(Xmat))
 
 
-logreg1 <- glm(fail ~ timecat, data=datcat, family="binomial")
-#not sure how to incorporate columns X1, ..., XT
+datcat_X <- (cbind((datcat), Xmat))
+
+# ids <- c(229)
+# dat %>% filter(personid %in% ids) %>% select(personid, timecat, fail)
+# datcat %>% filter(personid %in% ids)
+
+nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
+
+#0 means no incercept
+logmod <- glm(fail ~ 0 + . - personid, data=datcat_X, family="binomial")
+indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid"))
+
+X <- as.matrix(datcat_X[,indepcols])
+y <- datcat_X$fail
+
+regularization_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
+
+  p_hat <- de_logit(predict(mod, newx = Xdat, s="lambda.min"))
+  resids_p <- (ydat-p_hat)/(sqrt(p_hat*(1-p_hat)))
+  s <- ydat; s[ydat==0] <- -1
+  resids_d <- s*sqrt(-2*(ydat*log(p_hat) + (1-ydat)*log(1-p_hat)))
+  resids_p_stat <- sum(resids_p^2)
+  resids_d_stat <- -2*sum(ydat*log(p_hat) + (1-ydat)*log(1-p_hat))
+  p <- sum(as.matrix(coef(mod)) != 0)
+  dof <- nrow(Xdat)-p
+  return(list(p_hat = p_hat, resids_p=resids_p, resids_p_stat=resids_p_stat, resids_d=resids_d, resids_d_stat=resids_d_stat, dof=dof))
+}
+
+lassomod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 1)
+lassomod_stats <- regularization_diagnostics(lassomod)
+
+ridgemod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 0)
+ridgemod_stats <- regularization_diagnostics(ridgemod, y, X)
+
+
+#evaluating deviance of models. small p-value = lack of fit
+logmodtest <- pchisq(logmod$deviance, logmod$df.residual, lower=FALSE)
+
+lassomodtest <- pchisq(lassomod_stats$resids_d_stat, lassomod_stats$dof, lower=FALSE)
+
+ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=FALSE)
+
 ```
 
 
@@ -169,7 +240,7 @@ ggcoxdiagnostics(fitCPH_symptom, type = "deviance",
 
 #References
 
-http://influentialpoints.com/Training/coxs_proportional_hazards_regression_model-principles-properties-assumptions.htm#modmch
+http://influentialpoints.com/Training/coxs_proportional_hazards_modression_model-principles-properties-assumptions.htm#modmch
 
 
 https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3059453/
