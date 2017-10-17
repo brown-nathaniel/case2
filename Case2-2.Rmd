@@ -81,7 +81,7 @@ legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
 
 ```
 
-#### copy and paste some survival interpretations from the first submission. also mention that these lines need to be proportional for Cox. also re-order the cox stuff up here and logistic stuff last.
+From our Kaplan-Meier estimates for three different variables (race, gender, and the number of major stroke symptoms a patient shows), we observe that the survival curves are generally similar between 0-5 minute time range. However, thereappears a difference between the estimated survival curves for different number of symptoms a patient shows; specifically, people showing more symptoms tend to wait a shorter amount of time for their treatment.
 
 ### Logistic Regression
 ```{r logit}
