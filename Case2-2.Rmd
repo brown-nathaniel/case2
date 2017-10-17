@@ -3,8 +3,8 @@ title: "Case Study 2, Pt. 2"
 author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "October 18, 2017"
 output:
-  pdf_document: default
   html_document: default
+  pdf_document: default
 ---
 
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
@@ -16,14 +16,8 @@ library(gridExtra)
 library(dplyr)
 library(survminer)
 library(reshape2)
-<<<<<<< HEAD
-dat <- read.table("kellydat.txt", header=T)
-library(glmnet)
-
-=======
 library(glmnet)
 library(arm)
->>>>>>> 08f6a62cb31a05726b263f1b266f162e34b94e3c
 ```
 
 ```{r, fig}
@@ -278,7 +272,14 @@ binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_p, main = "Ridge Logi
 
 To perform logistic regression on the data, we categorized the time to event variable into groups of **BLANK** minutes, with all events occuring after **BLANK** minutes representing one group, since the sample size was so lo after that time (only `r sum(dat$nctdel > 5)` observations). Our predictors of the response (treatment or censoring) consisted of these time categories, and categories of race (categorized as Black/Hispanic, and Other), gender (male or female), and number of sypmtoms (0, 1, 2, 3+). 
 
-After performing logistic regression, we applied penalties to the regression because **BLANK**. LASSO Regularization has the best fit according to a deviance test, b. (the best fit depends on bin size and idk what bin size to use).
+After performing logistic regression, we applied penalties to the regression because **BLANK**. LASSO Regularization has the best fit according to a deviance test, b. (the best fit depends on bin size and idk what bin size to use). The three p-values for the test are reported below:
+
+```{r}
+d <- matrix(c(logmodtest, lassomodtest, ridgemodtest))
+colnames(d) <- "p-value"
+rownames(d) <- c("Ordinary Least Squares", "LASSO Penalty", "Ridge Penalty")
+knitr::kable(d)
+```
 
 The ridge looks like it has cleanest residuals (for now)
 ###Blah blah, more insights and p-values from logistic stuff. positive and negative coefficients.
