@@ -7,15 +7,6 @@ output:
   html_document: default
 ---
 
-<!-- 
-PLANS:
-  Sarah does cox thing
-  
-  Nathaniel does 
-
--->
-
-
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 set.seed(440)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
@@ -52,7 +43,15 @@ dat = dat %>% group_by(symptom) %>% mutate(symptomscan = ifelse(fail == 1, mean(
 dat = dat %>% group_by(gender) %>% mutate(genderscan = ifelse(fail == 1, mean(fail), 1-mean(fail))) %>% as.data.frame()
 ```
 
+
+#Introduction
+
+The data are from a study of time to critical neurological assessment for patients with stroke-like symptoms who are admitted to the emergency room. We are interested in the factors predictive of the time to assessment following admission to the ED for n=335 patients with mild to moderate motor impairment. The goal of the analysis is to perform inferences on the impact of clinical presentation, gender, and race on time to neurological assessment, where clinical presentation is measured as the number of the four major stroke symptoms: headache, loss of motor skills or weakness, trouble talking or understanding, and vision problems.
+
+
 ###Kaplan-Meier Analysis for Race, Gender, and Clinical Presentation 
+
+The first graph we created below is the overall survival curve. This curve shows how long the entire population in our dataset no matter the race, gender, or clinical condition will wait for evaluation. The graph also includes an upper and lower 95% confidence interval. Using this graph we know how the population is expected to wait. We can compare this estimated survival curve to the separate estimated survival curve for the different gender, race, and clincial condition groupings. 
 
 ```{r}
 dat.KM <- survfit(Surv(nctdel, fail) ~ 1, data = dat) #estimated survival curve 
@@ -88,6 +87,80 @@ legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
 ```
 
 From our Kaplan-Meier estimates for three different variables (race, gender, and the number of major stroke symptoms a patient shows), we observe that the survival curves are generally similar between 0-5 minute time range. However, thereappears a difference between the estimated survival curves for different number of symptoms a patient shows; specifically, people showing more symptoms tend to wait a shorter amount of time for their treatment.
+
+###Cox Proportional Hazard 
+
+Below are models using Cox Proportional Hazard Model. This type of regression looks into the effects of variables upon the event in the data set which in this case is a CT scan. This model does assume the effects of the predictor variables upon survival are constant over time and are additive in one scale. We began by creating the models. The three listed below are the Cox Ph for waiting time until event (CT scan) based on gender (female vs male), race (black + hispanic vs non black + non hispanic), and number of symptoms (0,1,2, or 3+). Before analyzing any of these model we checked to see if the models are appropriate for the data by looking at the assumptions. Discussion is below. 
+
+```{r}
+fitCPH_gender<- coxph(Surv(nctdel, fail) ~ gender, data=dat)
+fitCPH_race<- coxph(Surv(nctdel, fail) ~ race, data=dat)
+fitCPH_symptom<- coxph(Surv(nctdel, fail) ~ symptom, data=dat)
+```
+
+####Gender
+
+Looking at the diagnostics for the model gender influence on wait time to CT, we first investigated the influential points and then residuals of the graph. Although there are a few close to or above +/-.025 all of the points are below .05 so we do not consider any of the points influential. Additionally, looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.447) for each of the covariates; therefore, we can assume the proportional hazards. 
+
+```{r}
+par(mfrow=c(1,2))
+
+ggcoxdiagnostics(fitCPH_gender, type = "dfbeta",
+                 linear.predictions = FALSE, ggtheme = theme_bw(), main="Gender Influential Pts")#influential points
+ggcoxdiagnostics(fitCPH_gender, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Gender Resids.") #residuals
+
+cox.zph(fitCPH_gender)
+```
+
+####Race/Ethnicity 
+
+Looking at the diagnostics for the model race/ethnicity influence on wait time to CT the results were very similar to the analysis for gender above. Looking into the influential points, there are points as high as .04; however, since there are no points are above/below .05 so we do not consider any of the points influential. Additionally, looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.0802) for each of the covariates; therefore, we can assume the proportional hazards. 
+
+```{r}
+par(mfrow=c(1,2))
+
+ggcoxdiagnostics(fitCPH_race, type = "dfbeta",
+                 linear.predictions = FALSE, ggtheme = theme_bw(),  main="Race Influential Pts")#influential points
+ggcoxdiagnostics(fitCPH_race, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Race Resids.") #residuals
+cox.zph(fitCPH_race)
+
+```
+
+####Clinical Presentation 
+
+Looking at the diagnostics for the model clinical presentation influence on wait time to CT we do see different results than the results for gender and race/ethnicity above. Looking into the influential points, this time there are points as high as .05. We need to remove these points from the data since we consider these points affect the fit of the model. After removing the points  looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.0802) for each of the covariates; therefore, we can assume the proportional hazards.
+
+```{r}
+
+par(mfrow=c(1,2))
+
+ggcoxdiagnostics(fitCPH_symptom, type = "dfbeta",
+                 linear.predictions = FALSE, ggtheme = theme_bw(),  main="Sympt. Influential Pts")#influential points
+
+ggcoxdiagnostics(fitCPH_symptom, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Sympt. Resids.") #residuals
+
+cox.zph(fitCPH_symptom)
+```
+
+
+####Results 
+
+Looking at the summary we see if the patient is a male the wait time until CT scan will decrease by .1499 time units; however, 
+```{r}
+summary(fitCPH_gender)
+```
+
+```{r}
+summary(fitCPH_race)
+```
+
+```{r}
+summary(fitCPH_symptom)
+```
+
 
 ### Logistic Regression
 ```{r logit}
@@ -203,80 +276,13 @@ binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_p, main = "Ridge Logi
 
 ```
 
-To perform logistic regression on the data, we categorized the time to event variable into groups of **BLANK** minutes, with all events occuring after **BLANK** minutes representing one group, since the sample size was so lo after that time (only `r sum(dat$nctdel > 5)` observations). The LASSO Regularization has the best fit. (the best fit depends on bin size and idk what bin size to use).
+To perform logistic regression on the data, we categorized the time to event variable into groups of **BLANK** minutes, with all events occuring after **BLANK** minutes representing one group, since the sample size was so lo after that time (only `r sum(dat$nctdel > 5)` observations). Our predictors of the response (treatment or censoring) consisted of these time categories, and categories of race (categorized as Black/Hispanic, and Other), gender (male or female), and number of sypmtoms (0, 1, 2, 3+). 
+
+After performing logistic regression, we applied penalties to the regression because **BLANK**. LASSO Regularization has the best fit according to a deviance test, b. (the best fit depends on bin size and idk what bin size to use).
 
 The ridge looks like it has cleanest residuals (for now)
 ###Blah blah, more insights and p-values from logistic stuff. positive and negative coefficients.
 
-###Cox Proportional Hazard 
-
-Below are models using Cox Proportional Hazard Model. This type of regression looks into the effects of variables upon the event in the data set which in this case is a CT scan. This model does assume the effects of the predictor variables upon survival are constant over time and are additive in one scale. We began by creating the models. The three listed below are the Cox Ph for waiting time until event (CT scan) based on gender (female vs male), race (black + hispanic vs non black + non hispanic), and number of symptoms (0,1,2, or 3+). Before analyzing any of these model we checked to see if the models are appropriate for the data by looking at the assumptions. Discussion is below. 
-```{r}
-fitCPH_gender<- coxph(Surv(nctdel, fail) ~ gender, data=dat)
-fitCPH_race<- coxph(Surv(nctdel, fail) ~ race, data=dat)
-fitCPH_symptom<- coxph(Surv(nctdel, fail) ~ symptom, data=dat)
-```
-
-####Gender
-
-Looking at the diagnostics for the model gender influence on wait time to CT, we first investigated the influential points and then residuals of the graph. Although there are a few close to or above +/-.025 all of the points are below .05 so we do not consider any of the points influential. Additionally, looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.447) for each of the covariates; therefore, we can assume the proportional hazards. 
-```{r}
-par(mfrow=c(1,2))
-
-ggcoxdiagnostics(fitCPH_gender, type = "dfbeta",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main="Gender Influential Pts")#influential points
-ggcoxdiagnostics(fitCPH_gender, type = "deviance",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Gender Resids.") #residuals
-
-cox.zph(fitCPH_gender)
-```
-
-####Race/Ethnicity 
-Looking at the diagnostics for the model race/ethnicity influence on wait time to CT the results were very similar to the analysis for gender above. Looking into the influential points, there are points as high as .04; however, since there are no points are above/below .05 so we do not consider any of the points influential. Additionally, looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.0802) for each of the covariates; therefore, we can assume the proportional hazards. 
-
-```{r}
-par(mfrow=c(1,2))
-
-ggcoxdiagnostics(fitCPH_race, type = "dfbeta",
-                 linear.predictions = FALSE, ggtheme = theme_bw(),  main="Race Influential Pts")#influential points
-ggcoxdiagnostics(fitCPH_race, type = "deviance",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Race Resids.") #residuals
-cox.zph(fitCPH_race)
-
-```
-
-####Clinical Presentation 
-
-Looking at the diagnostics for the model clinical presentation influence on wait time to CT we do see different results than the results for gender and race/ethnicity above. Looking into the influential points, this time there are points as high as .05. We need to remove these points from the data since we consider these points affect the fit of the model. After removing the points  looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.0802) for each of the covariates; therefore, we can assume the proportional hazards.
-
-```{r}
-
-par(mfrow=c(1,2))
-
-ggcoxdiagnostics(fitCPH_symptom, type = "dfbeta",
-                 linear.predictions = FALSE, ggtheme = theme_bw(),  main="Sympt. Influential Pts")#influential points
-
-ggcoxdiagnostics(fitCPH_symptom, type = "deviance",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Sympt. Resids.") #residuals
-
-cox.zph(fitCPH_symptom)
-```
-
-
-####Results 
-
-Looking at the summary we see if the patient is a male the wait time until CT scan will decrease by .1499 time units; however, 
-```{r}
-summary(fitCPH_gender)
-```
-
-```{r}
-summary(fitCPH_race)
-```
-
-```{r}
-summary(fitCPH_symptom)
-```
 
 
 #Contributions
