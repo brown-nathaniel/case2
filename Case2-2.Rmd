@@ -17,6 +17,7 @@ PLANS:
 
 
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
+set.seed(440)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
 library(ggplot2)
 library(survival)
@@ -24,9 +25,14 @@ library(gridExtra)
 library(dplyr)
 library(survminer)
 library(reshape2)
+<<<<<<< HEAD
 dat <- read.table("kellydat.txt", header=T)
 library(glmnet)
 
+=======
+library(glmnet)
+library(arm)
+>>>>>>> 08f6a62cb31a05726b263f1b266f162e34b94e3c
 ```
 
 ```{r, fig}
@@ -81,6 +87,7 @@ legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
 
 ```
 
+From our Kaplan-Meier estimates for three different variables (race, gender, and the number of major stroke symptoms a patient shows), we observe that the survival curves are generally similar between 0-5 minute time range. However, thereappears a difference between the estimated survival curves for different number of symptoms a patient shows; specifically, people showing more symptoms tend to wait a shorter amount of time for their treatment.
 
 ### Logistic Regression
 ```{r logit}
@@ -101,13 +108,13 @@ de_logit <- function(logodds){
   p <- o/(1+o)
   return(p)
 }
-bounds <- seq(0, floor(max(dat$nctdel)))
+bounds <- 1:5
 
-dat$timecat <- lower_bound(dat$nctdel, bounds)
+dat$timecat <- as.integer(as.factor(lower_bound(dat$nctdel, bounds)))
 dat$personid <- 1:nrow(dat)
 datcat <- merge(dat$personid, bounds) %>% 
           unique() %>% 
-          rename(personid=x, timecat=y) %>% 
+          mutate(personid=x, timecat=as.integer(as.factor(y))) %>%
           arrange(personid, timecat) %>% 
             #take all unique combinations of people and time categories
           merge(dat, by=c("personid", "timecat"), all=TRUE) %>%
@@ -118,7 +125,7 @@ datcat <- merge(dat$personid, bounds) %>%
                  atrisk = (timecat <= maxtimecat)) %>%
           filter(atrisk) %>%
             #for each person, identify rows where persons are not at risk (after they fail/drop out), and remove those rows
-          select(personid, timecat, fail) %>%
+          dplyr::select(personid, timecat, fail) %>%
           as.data.frame()
 
 #code to add predictors of race, gender, and number of symptoms
@@ -131,7 +138,7 @@ datcat <- merge(datcat, dat, by="personid", all=T) %>%
                  personid = as.integer(personid), 
                  timecat = as.integer(timecat.x), 
                  fail = as.integer(fail.x)) %>% 
-          select(personid, timecat = timecat, fail = fail, symptom0, symptom1, symptom2, raceother, male)
+          dplyr::select(personid, timecat = timecat, fail = fail, symptom0, symptom1, symptom2, raceother, male)
 
 #code to add indicator effects of every timeunit
 Xmat <- array(0, c(nrow(datcat), length(bounds)))
@@ -140,7 +147,7 @@ Xmat <- array(0, c(nrow(datcat), length(bounds)))
 # counts <- data.frame(x = datcat$personid) %>% group_by(x) %>% mutate(n=n()) %>% '[['("n")
 
 for(r in 1:nrow(datcat)){
-  Xmat[r,datcat$timecat[r]+1] <- 1
+  Xmat[r,datcat$timecat[r]] <- 1
 }
 
 colnames(Xmat) <- paste0("X",1:ncol(Xmat))
@@ -148,22 +155,16 @@ colnames(Xmat) <- paste0("X",1:ncol(Xmat))
 
 datcat_X <- (cbind((datcat), Xmat))
 
-# ids <- c(229)
-# dat %>% filter(personid %in% ids) %>% select(personid, timecat, fail)
-# datcat %>% filter(personid %in% ids)
-
 nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
 
-#0 means no incercept
-logmod <- glm(fail ~ 0 + . - personid, data=datcat_X, family="binomial")
-indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid"))
-
-X <- as.matrix(datcat_X[,indepcols])
-y <- datcat_X$fail
-
-regularization_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
-
-  p_hat <- de_logit(predict(mod, newx = Xdat, s="lambda.min"))
+logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
+  
+  if(class(mod) == "cv.glmnet"){
+    fitvals <- predict.cv.glmnet(mod, newx = Xdat, s="lambda.min")
+  }else{
+    fitvals <- predict.glm(mod, newdata=data.frame(Xdat))
+  }
+  p_hat <- de_logit(fitvals)
   resids_p <- (ydat-p_hat)/(sqrt(p_hat*(1-p_hat)))
   s <- ydat; s[ydat==0] <- -1
   resids_d <- s*sqrt(-2*(ydat*log(p_hat) + (1-ydat)*log(1-p_hat)))
@@ -174,21 +175,38 @@ regularization_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   return(list(p_hat = p_hat, resids_p=resids_p, resids_p_stat=resids_p_stat, resids_d=resids_d, resids_d_stat=resids_d_stat, dof=dof))
 }
 
-lassomod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 1)
-lassomod_stats <- regularization_diagnostics(lassomod)
+indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid", "timecat"))
+X <- as.matrix(datcat_X[,indepcols])
+y <- datcat_X$fail
 
-ridgemod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 0)
-ridgemod_stats <- regularization_diagnostics(ridgemod, y, X)
+#0 means no incercept
+logmod <- glm(y ~ 0 + X, family="binomial")
+logmod_stats <- logistic_diagnostics(logmod)
+logmodtest <- pchisq(logmod$deviance, logmod$df.residual, lower=FALSE)
+
+lassomod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 1, intercept=FALSE)
+lassomod_stats <- logistic_diagnostics(lassomod)
+lassomodtest <- pchisq(lassomod_stats$resids_d_stat, lassomod_stats$dof, lower=FALSE)
+
+ridgemod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 0,intercept=FALSE)
+ridgemod_stats <- logistic_diagnostics(ridgemod)
+ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=FALSE)
 
 
 #evaluating deviance of models. small p-value = lack of fit
-logmodtest <- pchisq(logmod$deviance, logmod$df.residual, lower=FALSE)
+par((mfrow = c(3,1)))
+binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values")
 
-lassomodtest <- pchisq(lassomod_stats$resids_d_stat, lassomod_stats$dof, lower=FALSE)
+binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values")
 
-ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=FALSE)
+binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_p, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values")
 
 ```
+
+To perform logistic regression on the data, we categorized the time to event variable into groups of **BLANK** minutes, with all events occuring after **BLANK** minutes representing one group, since the sample size was so lo after that time (only `r sum(dat$nctdel > 5)` observations). The LASSO Regularization has the best fit. (the best fit depends on bin size and idk what bin size to use).
+
+The ridge looks like it has cleanest residuals (for now)
+###Blah blah, more insights and p-values from logistic stuff. positive and negative coefficients.
 
 ###Cox Proportional Hazard 
 
@@ -261,7 +279,9 @@ summary(fitCPH_symptom)
 ```
 
 
+#Contributions
 
+Nathaniel built the logistic regression model.
 
 
 
