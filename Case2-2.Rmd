@@ -23,12 +23,9 @@ library(survival)
 library(gridExtra)
 library(dplyr)
 library(survminer)
-<<<<<<< HEAD
 library(reshape2)
 dat <- read.table("kellydat.txt", header=T)
-=======
 library(glmnet)
->>>>>>> a78856c6725933fe8bd228cca609a1839e728242
 
 ```
 
