@@ -10,6 +10,7 @@ output:
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 set.seed(440)
 knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
+library(knitr)
 library(ggplot2)
 library(survival)
 library(gridExtra)
@@ -222,7 +223,7 @@ X <- as.matrix(datcat_X[,indepcols])
 y <- datcat_X$fail
 
 #0 means no incercept
-logmod <- glm(y ~ 0 + X, family="binomial")
+logmod <- glm(y ~ 0 + ., family="binomial", data = as.data.frame(cbind(y,X)))
 logmod_stats <- logistic_diagnostics(logmod)
 logmodtest <- pchisq(logmod$deviance, logmod$df.residual, lower=FALSE)
 
@@ -233,37 +234,46 @@ lassomodtest <- pchisq(lassomod_stats$resids_d_stat, lassomod_stats$dof, lower=F
 ridgemod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 0,intercept=FALSE)
 ridgemod_stats <- logistic_diagnostics(ridgemod)
 ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=FALSE)
-
-
-#evaluating deviance of models. small p-value = lack of fit
-par((mfrow = c(3,1)))
-binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values")
-
-binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values")
-
-binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_p, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values")
-
 ```
 
-To perform logistic regression on the data, we categorized the time to event variable into groups of **BLANK** minutes, with all events occuring after **BLANK** minutes representing one group, since the sample size was so lo after that time (only `r sum(dat$nctdel > 5)` observations). Our predictors of the response (treatment or censoring) consisted of these time categories, and categories of race (categorized as Black/Hispanic, and Other), gender (male or female), and number of sypmtoms (0, 1, 2, 3+). 
 
-After performing logistic regression, we applied penalties to the regression because **BLANK**. LASSO Regularization has the best fit according to a deviance test, b. (the best fit depends on bin size and idk what bin size to use). The three p-values for the test are reported below:
+To perform logistic regression on the data, we categorized the time-to-event variable into groups of **BLANK** minutes, with all events occuring after **BLANK** minutes representing one group, since the sample size was so low after that time (only `r sum(dat$nctdel > 5)` observations). Our predictors of the response (treatment or censoring) consisted of these time categories, and categories of race (categorized as Black/Hispanic, and Other), gender (male or female), and number of sypmtoms (0, 1, 2, 3+). The binned residual plots, deviance test results, and coefficients are all reported below. The `glmnet` package does not provide standard errors for its coefficients, so we cannot report a p-value reflecting how confident we are that those estimates are different than zero.
 
 ```{r}
+#evaluating deviance of models. small p-value = lack of fit
+par((mfrow = c(3,1)))
+
+logmodcoef <- round(summary(logmod)[["coefficients"]][,c(1,4)],4)
+colnames(logmodcoef)[2] <- "p-value"
+binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+
+lassomodcoef <- round(as.matrix(coef(lassomod)),4)
+colnames(lassomodcoef) <- "Estimate"
+binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+
+ridgemodcoef <- round(as.matrix(coef(ridgemod)),4)
+colnames(ridgemodcoef) <- "Estimate"
+binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+
 d <- matrix(c(logmodtest, lassomodtest, ridgemodtest))
 colnames(d) <- "p-value"
 rownames(d) <- c("Ordinary Least Squares", "LASSO Penalty", "Ridge Penalty")
-knitr::kable(d)
+
+kable(d)
+kable(logmodcoef)
+kable(lassomodcoef)
+kable(ridgemodcoef)
+
 ```
 
-The ridge looks like it has cleanest residuals (for now)
-###Blah blah, more insights and p-values from logistic stuff. positive and negative coefficients.
+All three of our logistic regression approaches---ordinary least squares, LASSO, and ridge---did not find much difference between these groups. The majority of coefficients are close to zero (or exactly zero in the LASSO model), and all of the models fit the data poorly according to the residual deviance test. Therefore, we cannot confidently claim that any of these factors are predictive of the time to  assessment.
+
 
 
 
 #Contributions
 
-Nathaniel built the logistic regression model. Sarah built and analyzed the Cox Proportional Hazard model. 
+Nathaniel built the logistic regression model and the supporting visualizations and summary statistics. Sarah built and analyzed the Cox Proportional Hazard model. 
 
 
 
