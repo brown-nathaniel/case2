@@ -84,75 +84,48 @@ From our Kaplan-Meier estimates for three different variables (race, gender, and
 
 ###Cox Proportional Hazard 
 
-Below are models using Cox Proportional Hazard Model. This type of regression looks into the effects of variables upon the event in the data set which in this case is a CT scan. This model does assume the effects of the predictor variables upon survival are constant over time and are additive in one scale. We began by creating the models. The three listed below are the Cox Ph for waiting time until event (CT scan) based on gender (female vs male), race (black + hispanic vs non black + non hispanic), and number of symptoms (0,1,2, or 3+). Before analyzing any of these model we checked to see if the models are appropriate for the data by looking at the assumptions. Discussion is below. 
+Below are models using Cox Proportional Hazard Model. This type of regression looks into the effects of variables upon the event in the data set which in this case is a CT scan. This model does assume the effects of the predictor variables upon survival are constant over time and are additive in one scale. We began by creating the models. They are Cox Ph models for waiting time until event (CT scan) based on gender (female vs male), race (black + hispanic vs non black + non hispanic), and number of symptoms (0,1,2, or 3+). Before analyzing any of these model we checked to see if the models are appropriate for the data by looking at the assumptions. Discussion is below.
+
+####Model
 
 ```{r}
-fitCPH_gender<- coxph(Surv(nctdel, fail) ~ gender, data=dat)
-fitCPH_race<- coxph(Surv(nctdel, fail) ~ race, data=dat)
-fitCPH_symptom<- coxph(Surv(nctdel, fail) ~ symptom, data=dat)
+fitCPH_all<- coxph(Surv(nctdel, fail) ~ gender+race+symptom, data=dat)
 ```
 
-####Gender
 
-Looking at the diagnostics for the model gender influence on wait time to CT, we first investigated the influential points and then residuals of the graph. Although there are a few close to or above +/-.025 all of the points are below .05 so we do not consider any of the points influential. Additionally, looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.447) for each of the covariates; therefore, we can assume the proportional hazards. 
+####Diagnostics
 
+Looking at the diagnostics for the model we will first investigate the residuals and then look into the influential points. If the model assumptions hold we will then look into the proportional hazard assumption before continuing on into a results analysis section. 
+
+Looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time.
 ```{r}
-par(mfrow=c(1,2))
-
-ggcoxdiagnostics(fitCPH_gender, type = "dfbeta",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main="Gender Influential Pts")#influential points
-ggcoxdiagnostics(fitCPH_gender, type = "deviance",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Gender Resids.") #residuals
-
-cox.zph(fitCPH_gender)
+ggcoxdiagnostics(fitCPH_all, type = "deviance",
+                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Residuals.") #residuals
 ```
 
-####Race/Ethnicity 
-
-Looking at the diagnostics for the model race/ethnicity influence on wait time to CT the results were very similar to the analysis for gender above. Looking into the influential points, there are points as high as .04; however, since there are no points are above/below .05 so we do not consider any of the points influential. Additionally, looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.0802) for each of the covariates; therefore, we can assume the proportional hazards. 
+Next, we investigate the influential points. For gender, although there are a few close to or above +/-.025 all of the points are below .05 so we do not consider any of the points influential. For race/ethnicity, looking into the influential points here, there are points as high as .04; however, again since there are no points are above/below .05 so we do not consider any of the points influential. Finally, for clinical presentation (0,1,2 or 3+ symptoms), looking into the influential points, there are different results. This time there are points as high as and higher than .05. Noticing this we accknowledge there are some points that will affect the fit of the model.
 
 ```{r}
-par(mfrow=c(1,2))
-
-ggcoxdiagnostics(fitCPH_race, type = "dfbeta",
-                 linear.predictions = FALSE, ggtheme = theme_bw(),  main="Race Influential Pts")#influential points
-ggcoxdiagnostics(fitCPH_race, type = "deviance",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Race Resids.") #residuals
-cox.zph(fitCPH_race)
-
-```
-
-####Clinical Presentation 
-
-Looking at the diagnostics for the model clinical presentation influence on wait time to CT we do see different results than the results for gender and race/ethnicity above. Looking into the influential points, this time there are points as high as .05. We need to remove these points from the data since we consider these points affect the fit of the model. After removing the points  looking at the residuals we see no pattern in the graph and a generally even spread number of points above and below 0. Since we see the residuals are independent of time. Finally we checked the assumption of proportional hazard. From the output, the test is not statistically significant (p=.0802) for each of the covariates; therefore, we can assume the proportional hazards.
-
-```{r}
-
-par(mfrow=c(1,2))
-
-ggcoxdiagnostics(fitCPH_symptom, type = "dfbeta",
+ggcoxdiagnostics(fitCPH_all, type = "dfbeta",
                  linear.predictions = FALSE, ggtheme = theme_bw(),  main="Sympt. Influential Pts")#influential points
-
-ggcoxdiagnostics(fitCPH_symptom, type = "deviance",
-                 linear.predictions = FALSE, ggtheme = theme_bw(), main= "Sympt. Resids.") #residuals
-
-cox.zph(fitCPH_symptom)
 ```
 
+
+Finally we checked the assumption of proportional hazard using the cox.zph() function. We check to see if the test is statistically significance (p value under .05). Because none of the p values for the covariates are singificant we can assume the proportional hazards.
+
+```{r}
+cox.zph(fitCPH_all)
+```
+
+Since all of the assumptions of the Cox Proportional Hazard model are met. We continue with looking into the results of the model. 
 
 ####Results 
 
-Looking at the summary we see if the patient is a male the wait time until CT scan will decrease by .1499 time units; however, 
-```{r}
-summary(fitCPH_gender)
-```
+Looking at the summary of the model, we see if the patient is a male the wait time until CT scan will decrease by .1496 time units. If a patient is non black or non hispanic their wait time will increase by .1620. If a patient has 1 symptom they will wait .1724 longer than a patient with 0 symptoms. If a patient had 2 symptoms they wait  .1750 longer than a patient with 0 symptoms. Finally, a patient with 3+ symptoms will wait .3674 longer than a patient with no symptoms. We do note that non of the variables are significant predictors in the model. We also know the R squared value is .016 so 1.6% of the variance of the data is explained in the model.
 
+Stepping back and reflecting, this model suggests there is gender bias against females, no race/ethnicity bias towards blacks and hispanics, and people with more than 0 symtoms have an longer wait time. Research shows that women tend to ignore signs of illness or attribute their symptoms of cardiac distress to something else (https://www.sharecare.com/health/womens-health/article/hidden-heart-attack-signs-in-women) so it is possible men will have a shorter wait time because they are more vocal about their signs of illness compared to women. Next, the data could have revealed occurance of racism during wait time meaning blacks and hispanic would wait longer, however this data does not show this is true. ***finish results section ***
 ```{r}
-summary(fitCPH_race)
-```
-
-```{r}
-summary(fitCPH_symptom)
+summary(fitCPH_all)
 ```
 
 
@@ -288,7 +261,7 @@ The ridge looks like it has cleanest residuals (for now)
 
 #Contributions
 
-Nathaniel built the logistic regression model.
+Nathaniel built the logistic regression model. Sarah built and analyzed the Cox Proportional Hazard model. 
 
 
 
