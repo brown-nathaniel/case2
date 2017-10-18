@@ -44,6 +44,8 @@ dat = dat %>% group_by(gender) %>% mutate(genderscan = ifelse(fail == 1, mean(fa
 The data are from a study of time to critical neurological assessment for patients with stroke-like symptoms who are admitted to the emergency room. We are interested in the factors predictive of the time to assessment following admission to the ED for n=335 patients with mild to moderate motor impairment. The goal of the analysis is to perform inferences on the impact of clinical presentation, gender, and race (Black, Hispanic, and others) on time to neurological assessment, where clinical presentation is measured as the number of the four major stroke symptoms: headache, loss of motor skills or weakness, trouble talking or understanding, and vision problems. However, as discussed in our previous report, we group Blacks and Hispanics together, and number of symptoms of 3 and 4 together, due to their small sample size. 
 
 
+This report includes initial results for 2 different methods that were considered to analyze the data: Cox Proportional Hazard and Logistic Regression. There is analysis on model diagnostics, results, and problems which arise in the models. To conclude we assess the effectiveness of the work and steps to improve analysis for next week. 
+
 ## Kaplan-Meier Analysis 
 
 We first look at the overall survival curve. The curve below shows the time the entire population -- regardless of race, gender, or clinical condition -- will wait for the examination, as well as its 95% confidence interval.  
@@ -276,7 +278,7 @@ kable(ridgemodcoef)
 ```
 
 \pagebreak
-All three of our logistic regression approaches---OLS, LASSO, and Ridge---do not find much difference between these groups. In the OLS model, the only coefficients that do not contain zero in their 95% confidence interval are `r names(which(!(logmodcoef[,1] < 0 & logmodcoef[,2] > 0))) %>% paste(collapse = " and ")`. In the LASSO and Ridge models, yhe majority of coefficients are close to zero or exactly zero, and all of the models fit the data poorly according to the deviance test. The residual plots also suggest a poor fit for all the models other than the OLS model. Therefore, we cannot confidently claim that any of these factors are predictive of the time to assessment.
+All three of our logistic regression approaches---OLS, LASSO, and Ridge---do not find much difference between these groups. In the OLS model, the only coefficients that do not contain zero in their 95% confidence interval are `r names(which(!(logmodcoef[,1] < 0 & logmodcoef[,2] > 0))) %>% paste(collapse = " and ")`. In the LASSO and Ridge models, the majority of coefficients are close to zero or exactly zero, and all of the models fit the data poorly according to the deviance test. The residual plots also suggest a poor fit for all the models other than the OLS model. Therefore, we cannot confidently claim that any of these factors are predictive of the time to assessment.
 
 ## Discussion
 
@@ -285,11 +287,11 @@ The models we build for this analysis do not fit the data well. This can be due 
 
 ## Contributions
 
-Nathaniel built the logistic regression model and the supporting visualizations and summary statistics. Sarah built and analyzed the Cox Proportional Hazard model. Inhee edited and added to the report.
+Nathaniel built the logistic regression model and the supporting visualizations and summary statistics. Sarah built and analyzed the Cox Proportional Hazard model and Kaplan Meier anlysis. Inhee edited and added to the report.
 
 
 
-#References
+##References
 
 http://influentialpoints.com/Training/coxs_proportional_hazards_modression_model-principles-properties-assumptions.htm#modmch
 
