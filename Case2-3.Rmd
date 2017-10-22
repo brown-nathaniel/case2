@@ -105,7 +105,10 @@ categorize_dat <- function(dat=NA, bounds=NA){
 
   return(datcat_X)
 }
-  nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
+
+datcat_X <- categorize_dat(dat, bounds)
+
+nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
 
 logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   
@@ -145,8 +148,8 @@ ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=F
 
 
 ```{r}
-bounds2 <- 1:floor(max(dat$nctdel))
-datcat_X2 <- categorize_nctdel(dat, bounds2)
+bounds <- 1:floor(max(dat$nctdel))
+datcat_X2 <- categorize_dat(dat, bounds2)
 indepcols2 <- which(!colnames(datcat_X2) %in% c("fail", "personid", "timecat"))
 X2 <- as.matrix(datcat_X2[,indepcols2])
 y2 <- datcat_X2$fail
@@ -167,7 +170,7 @@ kernels <- 4
 abline(v=tau)
 # we're going to pre-calculate a bunch of kernel weights. (to smooth line)
 # each row is one bin, the columns are the kernel weights for that bin
-kernel.weights <- matrix(dnorm(rep(1:80,kernels),rep(tau,each=80),s), ncol=kernels)
+kernel.weights <- matrix(dnorm(x=rep(1:80,kernels),rep(tau,each=80),s), ncol=kernels)
 
 # now we'll create a new transform function
 kernel.transformation <- function(datcat, bounds, kernels, s) {
