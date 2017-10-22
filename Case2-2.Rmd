@@ -201,7 +201,7 @@ colnames(Xmat) <- paste0("X",1:ncol(Xmat))
 
 datcat_X <- (cbind((datcat), Xmat))
 
-#nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
+nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
 
 logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   
