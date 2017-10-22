@@ -1,30 +1,211 @@
 ---
 title: "Untitled"
-author: "Sarah Zimmermann"
+author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "October 19, 2017"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
+set.seed(440)
+knitr::opts_chunk$set(echo = FALSE, warning = FALSE, message=FALSE)
+library(knitr)
+library(ggplot2)
+library(survival)
+library(gridExtra)
+library(dplyr)
+library(survminer)
+library(reshape2)
+library(glmnet)
+library(arm)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
+```{r}
+dat <- read.table("kellydat.txt", header=T)
+dat$race = "Other"
+dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
+dat$gender = "male"
+dat$gender[dat$male==0]="female"
+dat$symptom = "0"
+dat$symptom[dat$sn1==1]="1"
+dat$symptom[dat$sn2==1]="2"
+dat$symptom[dat$sn3==1|dat$all4==1]="3+"
+dat$scan="not scanned"
+dat$scan[dat$fail==1]="scanned"
+dat = dat %>% group_by(race) %>% mutate(racescan = ifelse(fail == 1, mean(fail), 1-mean(fail)))
+dat = dat %>% group_by(symptom) %>% mutate(symptomscan = ifelse(fail == 1, mean(fail), 1-mean(fail)))
+dat = dat %>% group_by(gender) %>% mutate(genderscan = ifelse(fail == 1, mean(fail), 1-mean(fail))) %>% as.data.frame()
 ```
 
-## Including Plots
 
-You can also embed plots, for example:
+```{r logit}
 
-```{r pressure, echo=FALSE}
-plot(pressure)
+lower_bound <- function(x, bounds){
+  ret <- rep(NA, length(x))
+  for(i in 1:length(x)){
+    xi <- x[i]
+    found <- (which(xi >= c(-Inf, bounds) & (xi <= c(bounds, Inf))))[1] - 1
+    if(found==0){found<-1}
+    ret[i] <- bounds[found]
+  }
+  return(ret)
+}
+
+de_logit <- function(logodds){
+  o <- exp(logodds)
+  p <- o/(1+o)
+  return(p)
+}
+
+bounds <- 0:5
+
+categorize_dat <- function(dat=NA, bounds=NA){
+
+  dat$timecat <- as.integer(as.factor(lower_bound(dat$nctdel, bounds)))
+  dat$personid <- 1:nrow(dat)
+  datcat <- merge(dat$personid, bounds) %>% 
+          mutate(personid=x, timecat=as.integer(as.factor(y))) %>%
+            #take all unique combinations of people and time categories
+          merge(dat, by=c("personid", "timecat"), all=TRUE) %>%
+          mutate(fail = ifelse(is.na(fail), 0, fail)) %>%
+            #add fail column
+          group_by(personid) %>%
+          mutate(maxtimecat = (timecat)[!is.na(nctdel)],
+                 atrisk = (timecat <= maxtimecat)) %>%
+          filter(atrisk) %>%
+            #for each person, identify rows where persons are not at risk (after they fail/drop out), and remove those rows
+          dplyr::select(personid, timecat, fail) %>%
+          as.data.frame()
+
+#code to add predictors of race, gender, and number of symptoms
+  datcat <- merge(datcat, dat, by="personid", all=T) %>% 
+          mutate(symptom0 = ifelse(symptom == 0, 1, 0),
+                 symptom1 = ifelse(symptom == 1, 1, 0),
+                 symptom2 = ifelse(symptom == 2, 1, 0),
+                 raceother = ifelse(race == "Other", 1, 0), 
+                 male = ifelse(gender == "male", 1, 0), 
+                 personid = as.integer(personid), 
+                 timecat = as.integer(timecat.x), 
+                 fail = as.integer(fail.x)) %>% 
+          dplyr::select(personid, timecat = timecat, fail = fail, symptom0, symptom1, symptom2, raceother, male)
+
+#code to add indicator effects of every timeunit
+  Xmat <- array(0, c(nrow(datcat), length(bounds)))
+# previd <- NA
+# changes <- c(diff(datcat$personid), 1) #a 1 marks the final index of each personid
+# counts <- data.frame(x = datcat$personid) %>% group_by(x) %>% mutate(n=n()) %>% '[['("n")
+
+  for(r in 1:nrow(datcat)){
+    Xmat[r,datcat$timecat[r]] <- 1
+  }
+
+  colnames(Xmat) <- paste0("X",1:ncol(Xmat))
+
+
+  datcat_X <- (cbind((datcat), Xmat))
+
+  return(datcat_X)
+}
+  nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
+
+logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
+  
+  if(class(mod) == "cv.glmnet"){
+    fitvals <- predict.cv.glmnet(mod, newx = Xdat, s="lambda.min")
+  }else{
+    fitvals <- predict.glm(mod, newdata=data.frame(Xdat))
+  }
+  p_hat <- de_logit(fitvals)
+  resids_p <- (ydat-p_hat)/(sqrt(p_hat*(1-p_hat)))
+  s <- ydat; s[ydat==0] <- -1
+  resids_d <- s*sqrt(-2*(ydat*log(p_hat) + (1-ydat)*log(1-p_hat)))
+  resids_p_stat <- sum(resids_p^2)
+  resids_d_stat <- -2*sum(ydat*log(p_hat) + (1-ydat)*log(1-p_hat))
+  p <- sum(as.matrix(coef(mod)) != 0)
+  dof <- nrow(Xdat)-p
+  return(list(p_hat = p_hat, resids_p=resids_p, resids_p_stat=resids_p_stat, resids_d=resids_d, resids_d_stat=resids_d_stat, dof=dof))
+}
+
+indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid", "timecat"))
+X <- as.matrix(datcat_X[,indepcols])
+y <- datcat_X$fail
+
+#0 means no incercept
+logmod <- glm(y ~ 0 + ., family="binomial", data = as.data.frame(cbind(y,X)))
+logmod_stats <- logistic_diagnostics(logmod)
+logmodtest <- pchisq(logmod$deviance, logmod$df.residual, lower=FALSE)
+
+lassomod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 1, intercept=FALSE)
+lassomod_stats <- logistic_diagnostics(lassomod)
+lassomodtest <- pchisq(lassomod_stats$resids_d_stat, lassomod_stats$dof, lower=FALSE)
+
+ridgemod <- cv.glmnet(y=y, x = X, family="binomial", type.measure="class", alpha = 0,intercept=FALSE)
+ridgemod_stats <- logistic_diagnostics(ridgemod)
+ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=FALSE)
 ```
 
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+
+```{r}
+bounds2 <- 1:floor(max(dat$nctdel))
+datcat_X2 <- categorize_nctdel(dat, bounds2)
+indepcols2 <- which(!colnames(datcat_X2) %in% c("fail", "personid", "timecat"))
+X2 <- as.matrix(datcat_X2[,indepcols2])
+y2 <- datcat_X2$fail
+
+
+
+#0 means no incercept
+logmod2 <- glm(y2 ~ 0 + ., family="binomial", data = as.data.frame(cbind(y2,X2)))
+
+beta <- coef(logmod2)
+hazard <- exp(beta)/(1+exp(beta))
+plot(bounds2, hazard[startsWith(names(hazard), "X")], type='l')
+
+# this is pretty ugly. Let's smooth it out with kernel regression.
+
+# set up the kernels
+kernels <- 4
+abline(v=tau)
+# we're going to pre-calculate a bunch of kernel weights. (to smooth line)
+# each row is one bin, the columns are the kernel weights for that bin
+kernel.weights <- matrix(dnorm(rep(1:80,kernels),rep(tau,each=80),s), ncol=kernels)
+
+# now we'll create a new transform function
+kernel.transformation <- function(datcat, bounds, kernels, s) {
+
+  tau <- seq(from=1, to=max(bounds), length.out = kernels)
+  s <- (tau[2]-tau[1])/2
+  
+  N <- 100
+  x <- seq(min(bounds), 
+           max(bounds),
+           length = N)# determines smoothness of densities.
+  densities <- t(apply((as.matrix(x)), 1, dnorm, mean=tau, sd=s))
+  
+  # X has kernel weights instead of the bin indicators that it had before
+  datcat_k <- datcat[,-which(names(datcat) %in% paste0("X",bounds))]
+  k <- array(0, c(nrow(datcat), kernels))
+  colnames(k) <- paste0("k",1:kernels)
+
+  datcat_k <- cbind(datcat_k, k)
+  return(as.data.frame(datcat_k))
+}
+
+d2 <- kernel.transformation(times[1], censored[1], total_bins)
+
+for(i in 2:length(times)) {
+  d2 <- rbind(d2, kernel.transformation(times[i], censored[i], total_bins))
+}
+
+# fit a model
+
+m2 <- glm(y ~ 0 + ., data=d2, family="binomial")
+summary(m2)
+
+# make a smooth plot
+
+
+hazard.logodds <- predict(m2, newdata = data.frame(kernel.weights))
+hazard <- exp(hazard.logodds)/(1+exp(hazard.logodds))
+plot(1:total_bins, hazard, type='l')
+
+```
