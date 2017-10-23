@@ -103,6 +103,8 @@ categorize_dat <- function(dat=NA, bounds=NA){
 
   datcat_X <- (cbind((datcat), Xmat))
 
+  datcat_X$nctdel <- merge(datcat_X, dat, by="personid", all=TRUE)$nctdel
+  
   return(datcat_X)
 }
 
@@ -112,7 +114,7 @@ nullmod <- glm(fail ~ 1, data=datcat_X, family="binomial")
 
 logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   
-  if(class(mod) == "cv.glmnet"){
+  if(class(mod)[1] == "cv.glmnet"){
     fitvals <- predict.cv.glmnet(mod, newx = Xdat, s="lambda.min")
   }else{
     fitvals <- predict.glm(mod, newdata=data.frame(Xdat))
@@ -123,12 +125,12 @@ logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   resids_d <- s*sqrt(-2*(ydat*log(p_hat) + (1-ydat)*log(1-p_hat)))
   resids_p_stat <- sum(resids_p^2)
   resids_d_stat <- -2*sum(ydat*log(p_hat) + (1-ydat)*log(1-p_hat))
-  p <- sum(as.matrix(coef(mod)) != 0)
+  p <- sum(as.matrix(coef(mod)) != 0 | is.na(as.matrix(coef(mod))))
   dof <- nrow(Xdat)-p
   return(list(p_hat = p_hat, resids_p=resids_p, resids_p_stat=resids_p_stat, resids_d=resids_d, resids_d_stat=resids_d_stat, dof=dof))
 }
 
-indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid", "timecat"))
+indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid", "timecat", "nctdel"))
 X <- as.matrix(datcat_X[,indepcols])
 y <- datcat_X$fail
 
@@ -149,8 +151,8 @@ ridgemodtest <- pchisq(ridgemod_stats$resids_d_stat, ridgemod_stats$dof, lower=F
 
 ```{r}
 bounds <- 1:floor(max(dat$nctdel))
-datcat_X2 <- categorize_dat(dat, bounds2)
-indepcols2 <- which(!colnames(datcat_X2) %in% c("fail", "personid", "timecat"))
+datcat_X2 <- categorize_dat(dat, bounds)
+indepcols2 <- which(!colnames(datcat_X2) %in% c("fail", "personid", "timecat", "nctdel"))
 X2 <- as.matrix(datcat_X2[,indepcols2])
 y2 <- datcat_X2$fail
 
@@ -161,55 +163,99 @@ logmod2 <- glm(y2 ~ 0 + ., family="binomial", data = as.data.frame(cbind(y2,X2))
 
 beta <- coef(logmod2)
 hazard <- exp(beta)/(1+exp(beta))
-plot(bounds2, hazard[startsWith(names(hazard), "X")], type='l')
+plot(bounds, hazard[startsWith(names(hazard), "X")], type='l')
 
 # this is pretty ugly. Let's smooth it out with kernel regression.
 
 # set up the kernels
-kernels <- 4
-abline(v=tau)
-# we're going to pre-calculate a bunch of kernel weights. (to smooth line)
-# each row is one bin, the columns are the kernel weights for that bin
-kernel.weights <- matrix(dnorm(x=rep(1:80,kernels),rep(tau,each=80),s), ncol=kernels)
+kernels <- 2
+
 
 # now we'll create a new transform function
-kernel.transformation <- function(datcat, bounds, kernels, s) {
+kernel_transformation <- function(datcat, bounds, kernels, s=NA) {
 
+  Ks <- array(NA, c(nrow(datcat), kernels))
+  colnames(Ks) <- paste0("k", 1:kernels)
+  datcat <- datcat[,!startsWith(colnames(datcat), "X")]
+  datcat_k <- cbind(datcat, Ks)
+  kcols <- (ncol(datcat_k) - kernels + 1):ncol(datcat_k)
+  
   tau <- seq(from=1, to=max(bounds), length.out = kernels)
   s <- (tau[2]-tau[1])/2
   
-  N <- 100
-  x <- seq(min(bounds), 
-           max(bounds),
-           length = N)# determines smoothness of densities.
-  densities <- t(apply((as.matrix(x)), 1, dnorm, mean=tau, sd=s))
-  
+  # each row is one bin, the columns are the kernel weights for that bin
+  kernel.weights <- matrix(dnorm(x=rep(1:length(bounds),kernels),mean=rep(tau,each=length(bounds)),s), ncol=kernels)
+
+  for(p in unique(datcat$personid)){
+    subrows <- which(datcat$personid == p)
+    time <- max(datcat$timecat[subrows])
+
+    K <- array(kernel.weights[1:time,],dim=c(time,kernels))
+    datcat_k[subrows,kcols] <- K
+  }
+  #datcat_k <- cbind(datcat, K)
   # X has kernel weights instead of the bin indicators that it had before
-  datcat_k <- datcat[,-which(names(datcat) %in% paste0("X",bounds))]
-  k <- array(0, c(nrow(datcat), kernels))
-  colnames(k) <- paste0("k",1:kernels)
-
-  datcat_k <- cbind(datcat_k, k)
-  return(as.data.frame(datcat_k))
+   return(as.data.frame(datcat_k))
 }
 
-d2 <- kernel.transformation(times[1], censored[1], total_bins)
-
-for(i in 2:length(times)) {
-  d2 <- rbind(d2, kernel.transformation(times[i], censored[i], total_bins))
-}
+datcat_X3 <- kernel_transformation(datcat_X, bounds, 4)
+indepcols3 <- which(!colnames(datcat_X3) %in% c("fail", "personid", "timecat", "nctdel"))
+X3 <- as.matrix(datcat_X3[,indepcols3])
+y3 <- datcat_X3$fail
 
 # fit a model
 
-m2 <- glm(y ~ 0 + ., data=d2, family="binomial")
-summary(m2)
+m3 <- glm(y3 ~ 0 + .,  data = as.data.frame(cbind(y3,X3)), family="binomial")
+summary(m3)
 
 # make a smooth plot
 
 
-hazard.logodds <- predict(m2, newdata = data.frame(kernel.weights))
-hazard <- exp(hazard.logodds)/(1+exp(hazard.logodds))
-plot(1:total_bins, hazard, type='l')
+# hazard.logodds <- predict(m3, newdata = data.frame(kernel.weights))
+# hazard <- exp(hazard.logodds)/(1+exp(hazard.logodds))
+# plot(1:total_bins, hazard, type='l')
+
+kernelmod_stats <- logistic_diagnostics(m3, y3, X3)
+kernelmodtest <- pchisq(kernelmod_stats$resids_d_stat, kernelmod_stats$dof, lower=FALSE)
+
+```
+
+
+
+```{r}
+#evaluating deviance of models. small p-value = lack of fit
+#par((mfrow = c(3,1)))
+
+stats <- summary(logmod)$coefficients
+xbar <- stats[,1]
+sigma <- stats[,2]
+logmodcoef <- xbar + 1.96*cbind(-sigma, sigma)
+logmodcoef <- round(logmodcoef,4)
+colnames(logmodcoef) <- c("Lower", "Upper")
+binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+```
+
+```{r}
+lassomodcoef <- round(as.matrix(coef(lassomod)),4)
+colnames(lassomodcoef) <- "LASSO Estimate"
+binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+```
+
+```{r}
+ridgemodcoef <- round(as.matrix(coef(ridgemod)),4)
+colnames(ridgemodcoef) <- "Ridge Estimate"
+binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+```
+
+```{r}
+d <- round(matrix(c(logmodtest, lassomodtest, ridgemodtest)),4)
+colnames(d) <- "Deviance p-value"
+rownames(d) <- c("OLS", "LASSO Penalty", "Ridge Penalty")
+
+kable(d)
+kable(logmodcoef)
+kable(lassomodcoef)
+kable(ridgemodcoef)
 
 ```
 
