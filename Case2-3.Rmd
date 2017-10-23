@@ -17,6 +17,7 @@ library(survminer)
 library(reshape2)
 library(glmnet)
 library(arm)
+library(mice)
 ```
 
 ```{r}
@@ -287,3 +288,30 @@ res <- sampleGibbs(.25,.25,n.sims,data)
 head(res)
 ```
 
+```{r}
+data <- read.table("kellydat.txt", header=T)
+data$race = 0
+data$race[data$black==1|data$hisp==1] = 1
+data$sn0 = 0
+data$sn0[data$sn1==0 & data$sn2==0 & data$sn3==0 & data$all4==0] = 1
+
+data.imp = data
+data.imp$nctdel[data.imp$fail == 0] = NA
+
+md.pattern(data.imp[!is.na(data.imp$nctdel),])
+
+
+tempData <- mice(data.imp,m=5,maxit=50,meth='pmm',seed=500)
+# methods: 
+# 2l.norm / 2l.pan / 2lonly.mean / 2lonly.norm / 2lonly.pmm / 
+# cart / fastpmm / lda / logreg / logreg.boot / mean / midastouch / norm / norm.boot / norm.nob / 
+# norm.predict / passive / pmm / polr / polyreg / quadratic / rf / ri / sample
+
+tempData$imp$nctdel
+
+data.imp <- complete(tempData)
+
+hist(log(data.imp$nctdel + 0.1))
+
+fit <-lm(log(nctdel+0.1) ~ sn0 + sn1 + sn2 + race + male, data = data)
+```
