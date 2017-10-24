@@ -265,6 +265,7 @@ ridgemodcoef <- round(as.matrix(coef(ridgemod)),4)
 colnames(ridgemodcoef) <- "Ridge Estimate"
 binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
 ```
+
 ```{r}
 d <- round(matrix(c(logmodtest, lassomodtest, ridgemodtest)),4)
 colnames(d) <- "Deviance p-value"
