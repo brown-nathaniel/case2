@@ -166,6 +166,15 @@ kernel_transformation <- function(datcat, bounds, kernels, s=NA) {
    return(as.data.frame(datcat_k))
 }
 
+kernel.weights_1= data.frame(kernel.weights, rep(-0.73895618, 6), rep(-0.35687333, 6), rep(-0.44156633), rep(0.05489664 ,6), rep(-0.25308262, 6) )
+
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
+
+colnames(kernel.weights_1)= colnames
+
+x= predict(kernelmod, kernel.weights_1)
+
+invlogit(x)
 ```
 
 ```{r logitanalysis}
@@ -305,12 +314,12 @@ library(mice)
 
 
 ##looking for pattern of missing data
-md.pattern(data)
+md.pattern(data.imp)
 
 #visualizations: 
 aggr_plot <- aggr(data, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
 
-marginplot(data[c(1,2)])
+marginplot(data.imp[c(1,2)])
 marginplot(data[c(1,3)])
 marginplot(data[c(1,4)])
 marginplot(data[c(1,5)])
