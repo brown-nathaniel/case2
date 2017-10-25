@@ -337,13 +337,56 @@ xyplot(tempData,nctdel ~ fail+male+black,pch=18,cex=1)
 
 densityplot(tempData)
 
-stripplot(data, pch = 20, cex = 1.2)
+#stripplot(data, pch = 20, cex = 1.2)
 ```
 
 
 
 # Survival Curves: 
 ##Question for Jonathan: how do we plot a survival curve from glm???
+
+```{r}
+#survival to time t = p(x>t);
+get_timecat_hazards <- function(mod){
+  coefs <- as.matrix(coef(mod))
+  invlogit(coefs[which(startsWith(rownames(coefs),"X")),])
+}
+
+#calculate the hazards of each time category (kernels are a little more complicated)
+logmod_hazards <- get_timecat_hazards(logmod)
+lassomod_hazards <- get_timecat_hazards(lassomod)
+ridgemod_hazards <- get_timecat_hazards(ridgemod)
+
+get_timecat_survival <- function(mod_hazards){
+  p <- s <- NULL
+  for(t in 1:length(mod_hazards)){
+
+    #h_1 <- p(x=1)/p(x>=1) = p(x=1)
+    #h_2 <- p(x=2)/p(x>=2) = p(x=2)/(1-h_1)
+    #h_3 <- p(x=3)/p(x>=3) = p(x=3)/[(1-h_1)(1-h_2)]
+  
+    #h_t <- p(x=t)/[(1-h_1)(1-h_2)...(1-h_(t-1))] ==> p(x=t) = h_t(1-h_1)(1-h_2)...(1-h_(t-1))
+      p[t] <- prod(1-mod_hazards[0:(t-1)])*mod_hazards[t]
+  #calculate discrete pdf
+  
+    #put the p(x=1), p(x=2)...all together
+
+  #calculate survival by summing pdf bins
+  
+    #s(t) = sum(pdf) from 0 to t
+  }
+  s <- 1-cumsum(p)
+  return(list(pmf=p, surv=s))
+}
+
+logmod_surv <- get_timecat_survival(logmod_hazards)
+lassomod_surv <- get_timecat_survival(lassomod_hazards)
+ridgemod_surv <- get_timecat_survival(ridgemod_hazards)
+
+plot(x=1:length(logmod_surv[[2]]), y=logmod_surv[[2]], type="s")
+plot(x=1:length(lassomod_surv[[2]]), y=lassomod_surv[[2]], type="s")
+plot(x=1:length(ridgemod_surv[[2]]), y=ridgemod_surv[[2]], type="s")
+```
 
 ```{r}
 plot(survfit(Surv(timecat, fail) ~ race + male, data = datcat_X), 
