@@ -166,15 +166,7 @@ kernel_transformation <- function(datcat, bounds, kernels, s=NA) {
    return(as.data.frame(datcat_k))
 }
 
-kernel.weights_1= data.frame(kernel.weights, rep(-0.73895618, 6), rep(-0.35687333, 6), rep(-0.44156633), rep(0.05489664 ,6), rep(-0.25308262, 6) )
 
-colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
-
-colnames(kernel.weights_1)= colnames
-
-x= predict(kernelmod, kernel.weights_1)
-
-invlogit(x)
 ```
 
 ```{r logitanalysis}
@@ -333,9 +325,9 @@ marginplot(data[c(1,10)])
 
 #visualize distribution of original and imputed data- check if imputed data is plausible
 
-xyplot(tempData,nctdel ~ fail+male+black,pch=18,cex=1)  
+#xyplot(tempData,nctdel ~ fail+male+black,pch=18,cex=1)  
 
-densityplot(tempData)
+#densityplot(tempData)
 
 #stripplot(data, pch = 20, cex = 1.2)
 ```
@@ -389,7 +381,30 @@ plot(x=1:length(ridgemod_surv[[2]]), y=ridgemod_surv[[2]], type="s")
 ```
 
 ```{r}
-plot(survfit(Surv(timecat, fail) ~ race + male, data = datcat_X), 
+#kernel survival curve 
+bounds=c(0,1,2,3,4,5)
+kernels=2
+tau <- seq(from=1, to=max(bounds), length.out = kernels)
+s <- (tau[2]-tau[1])/2
+kernel.weights <- matrix(dnorm(x=rep(1:length(bounds),kernels),mean=rep(tau,each=length(bounds)),s), ncol=kernels)
+
+kernel.weights_1= data.frame(kernel.weights, rep(-0.73895618, 6), rep(-0.35687333, 6), rep(-0.44156633), rep(0.05489664 ,6), rep(-0.25308262, 6) )
+
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
+
+colnames(kernel.weights_1)= colnames
+
+x= predict(kernelmod, kernel.weights_1)
+
+
+
+kernel_surv= get_timecat_survival(invlogit(x))
+plot(x=1:length(logmod_surv[[2]]), y=logmod_surv[[2]], type="s")
+```
+
+
+```{r}
+plot(survfit(Surv(timecat, fail) ~ raceother + male, data = datcat_X), 
      main=expression(paste("Kaplan-Meier Estimate ", hat(S)(t), " with CI")),xlab="t", ylab="Survival", lwd=2)
 ```
 
