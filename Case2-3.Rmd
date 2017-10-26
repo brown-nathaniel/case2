@@ -46,12 +46,23 @@ The data are from a study of time to critical neurological assessment for patien
 ##Methods
 
 The team has cleaned, understood, and modeled these time to critical neurological assessment for patients with stroke-like symptoms data in order to solve the scientific problem of exploring if gender, race/ethnicity, and clinical presentation have an affect on wait list to assessment. To do so the team has approached the problem as such:
-  *
-  *
-  *
-  *
-  *
 
+1. Data Exploration 
+  + Read in the data 
+  + Explore summary statistics of data 
+  + Visualize the data 
+2. Create inital models including OLS, Ridge, and LASSO
+  + Diagnostics
+  + Results
+  + Survival Curves 
+  + Interpretation 
+  + Assess sucess
+3. Create final models with kernel regression
+  + Diagnostics
+  + Results
+  + Survival Curves 
+  + Interpretation
+4. Final recommendations and insight 
 
 ##Data Exploration
 
@@ -70,44 +81,38 @@ hisp|1 if hispanic, 0 if not hispanic|categorical
 sn1|0/1 indicator 1 main symptom| categorical
 sn2|0/1 indicator 2 main symptoms| categorical
 sn3|0/1 indicator 3 main symptoms| categorical
-all4|0/1 indicator all main sumptoms|categorical 
+all4|0/1 indicator all main sumptoms|categorical
 
-###Exploratory Data Analysis 
+There are no missing values or apparently out of range values in our data, and therefore we had no need to clean the data. However, we created variables to better visualize the data. Race is a 2-level variable (Black/Hispanic and Other) which represents all those in the dataset who are Black or Hispanic in one category and non-Black and non-Hispanic in the other. We decided to group Black and Hispanic together because Blacks and Hispanics had relatively small sample sizes, constituting 97 out of 335 patients observed. Particularly, there were only 9 Hispanics, which is a population too small to represent the group and therefore difficult to draw conclusions upon. Next, symptom is a 4 level variable: "0" for those who had no symptoms, "1" for those who had 1 symptom, "2" for those who had 2 symptoms, and "3+" for those who had 3 or more symptoms. We grouped those patients which 3 or 4 symptoms together because there were only 6 individuals out of 335 observations in the dataset who had 4 symptoms, which is very small a population size to draw any conclusions on.  
 
 ```{r}
+pdat = dat[,1:2]
+pdat$race = "Others"
+pdat$race[dat$black==1]="Black"
+pdat$race[dat$hisp==1]="Hispanic"
+pdat$gender = "male"
+pdat$gender[dat$male==0]="female"
+pdat$symptom = "0"
+pdat$symptom[dat$sn1==1]="1"
+pdat$symptom[dat$sn2==1]="2"
+pdat$symptom[dat$sn3==1]="3"
+pdat$symptom[dat$all4==1]="4"
 
-par(mfrow=c(1,3))
-dat.KM.race <- survfit(Surv(nctdel, fail) ~ race, type="kaplan-meier", conf.type="log", data=dat)
+p1<- ggplot(data = pdat, aes(x=race, fill=race)) + geom_bar() + theme_bw()+labs(x="Race", y="Frequency",fill="") + theme(axis.text = element_text(angle = 45, hjust = 1))
+p2<- ggplot(data = pdat, aes(x=symptom, fill=symptom)) + geom_bar() + theme_bw()+labs(x="Number of Symptoms", y="Frequency", fill="")
+p3<- ggplot(data= pdat, aes(x=gender, fill= gender)) + geom_bar() + theme_bw()+labs(x="Gender", y="Frequency", fill="")
 
-plot(dat.KM.race, main=expression(paste("KM-Est ", hat(S)[g](t), " for Race")),
-     xlab="t", ylab="Survival", lwd=2, col=1:3, cex.main=0.9)
-legend(x="topright", col=1:2, lwd=2, legend=c("Black/Hisp", "Other"))
-
-
-dat.KM.gender <- survfit(Surv(nctdel, fail) ~ male, type="kaplan-meier", conf.type="log", data=dat)
-
-plot(dat.KM.gender, main=expression(paste("KM-Est ", hat(S)[g](t), " for Gender")),
-     xlab="t", ylab="Survival", lwd=2, col=1:2, cex.main=0.9)
-legend(x="topright", col=1:2, lwd=2, legend=c("male", "female"))
-
-
-dat.KM.symptom <- survfit(Surv(nctdel, fail) ~ symptom, type="kaplan-meier", conf.type="log", data=dat)
-
-plot(dat.KM.symptom, main=expression(paste("KM-Est ", hat(S)[g](t), " for Clinical Presentation")),
-     xlab="t", ylab="Survival", lwd=2, col=1:4, cex.main=0.9)
-legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
-
+grid.arrange(p1, p2, p3 , ncol=3)
 
 ```
 
-##Initial Model Exploration
 
-describe process of lasso, ols, and ridge 
+###Exploratory Data Analysis
 
 
-##Final Model Exploration 
+#PUT USEFUL EDA HERE 
 
-describe kernel regression 
+
 
 ```{r logitfunctions}
 #all the functions
@@ -282,149 +287,62 @@ kernelmod_coef <- logistic_conf(kernelmod)
 ```
 
 
+
+##Initial Model Exploration
+
+To perform logistic regression on the data, we categorize the time-to-event variable into groups of 1 minute,
+with all events occuring after 5 minutes grouped together, since the sample size is low after 5 minutes, with
+only 9 observations. Our predictors consist of these time categories, as well as the aforementioned categories
+of race, gender, and clinical presentation. The binned residual plots, deviance test results, and coefficients are
+reported below. We attempt three approaches to logistic regresion: Ordinary Least Squares (OLS), LASSO,
+and Ridge. The glmnet package does not provide standard errors for its coefficients, so we cannot report
+confidence intervals for the estimates.
+
+###Diagnostics
+
+We check the diagnostics to see if the model properly fits the data.The residual plots suggest a poor fit for all the models other than the OLS model.
+
 ```{r}
-data <- read.table("kellydat.txt", header=T)
-data$race = 0
-data$race[data$black==1|data$hisp==1] = 1
-data$sn0 = 0
-data$sn0[data$sn1==0 & data$sn2==0 & data$sn3==0 & data$all4==0] = 1
 
-data.imp = data
-data.imp$nctdel[data.imp$fail == 0] = NA
+par(mfrow=c(2,2))
 
-#md.pattern(data.imp[!is.na(data.imp$nctdel),])
+binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Log Regression Binned Resid", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
 
-tempData <- mice(data.imp,m=5,maxit=50,meth='pmm',seed=500, print=FALSE)
-# methods: 
-# 2l.norm / 2l.pan / 2lonly.mean / 2lonly.norm / 2lonly.pmm / 
-# cart / fastpmm / lda / logreg / logreg.boot / mean / midastouch / norm / norm.boot / norm.nob / 
-# norm.predict / passive / pmm / polr / polyreg / quadratic / rf / ri / sample
+binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Log Regression Binned Resid", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
 
-#tempData$imp$nctdel
+binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Log Regression Binned Resid", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
 
-data.imp <- complete(tempData)
 
-hist(log(data.imp$nctdel + 0.1))
-
-fit <-lm(log(nctdel+0.1) ~ sn0 + sn1 + sn2 + race + male, data = data)
 ```
 
-##Diagnostic 
+###Results 
 
-<!-- ```{r} -->
-<!-- binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
-<!-- ``` -->
+Below are the results of the OLS, LASSO Penalty and Ridge Penalty respectively.
 
-<!-- ```{r} -->
-<!-- binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
-<!-- ``` -->
-
-<!-- ```{r} -->
-<!-- binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
-<!-- ``` -->
-
-
-<!-- ```{r} -->
-<!-- binnedplot(x=kernelmod_stats$p_hat, y=kernelmod_stats$resids_d, main = "Kernel Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
-<!-- ``` -->
-
-
-
+All three of our logistic regression approaches-OLS, LASSO, and Ridge-do not find much difference between
+these groups. In the OLS model, the only coefficients that do not contain zero in their 95% confidence interval
+are X1 and X3. In the LASSO and Ridge models, the majority of coefficients are close to zero or exactly zero,
+and all of the models fit the data poorly according to the deviance test. Therefore, we cannot confidently claim that any of
+these factors are predictive of the time to assessment.
 
 ```{r}
-library(VIM)
-library(mice)
-
-
-##looking for pattern of missing data
-md.pattern(data.imp)
-
-#visualizations: 
-aggr_plot <- aggr(data, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
-
-marginplot(data.imp[c(1,2)])
-marginplot(data[c(1,3)])
-marginplot(data[c(1,4)])
-marginplot(data[c(1,5)])
-marginplot(data[c(1,6)])
-marginplot(data[c(1,7)])
-marginplot(data[c(1,8)])
-marginplot(data[c(1,9)])
-marginplot(data[c(1,10)])
-
-
-
-#visualize distribution of original and imputed data- check if imputed data is plausible
-
-#xyplot(tempData,nctdel ~ fail+male+black,pch=18,cex=1)  
-
-#densityplot(tempData)
-
-#stripplot(data, pch = 20, cex = 1.2)
-```
-##Interpretation 
-
-```{r}
-d <- round(matrix(c(logmod_test, lassomod_test, ridgemod_test, kernelmod_test)),4)
+d <- round(matrix(c(logmod_test, lassomod_test, ridgemod_test)),3)
 colnames(d) <- "Deviance p-value"
-rownames(d) <- c("OLS", "LASSO Penalty", "Ridge Penalty", "Kernels")
+rownames(d) <- c("OLS", "LASSO Penalty", "Ridge Penalty")
+
 
 kable(d)
-kable(logmod_coef)
-kable(lassomod_coef)
-kable(ridgemod_coef)
-kable(kernelmod_coef)
+
+kable(list(logmod_coef, lassomod_coef, ridgemod_coef))
 ```
 
-# Discussion
-
-why nothing is significant:
-
-```{r}
-#this is not actually part of the report as of right now
-dat$lnctdel <- log(dat$nctdel+0.01)
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n))) 
-
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-```
-
-##References 
-
-https://www.r-bloggers.com/imputing-missing-data-with-r-mice-package/
-
-##Credits 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-# Survival Curves: 
-##Question for Jonathan: how do we plot a survival curve from glm???
-
+###Survival Curves 
 ```{r}
 #survival to time t = p(x>t);
 get_timecat_hazards <- function(mod){
   coefs <- as.matrix(coef(mod))
   invlogit(coefs[which(startsWith(rownames(coefs),"X")),])
 }
-
-#calculate the hazards of each time category (kernels are a little more complicated)
-logmod_hazards <- get_timecat_hazards(logmod)
-lassomod_hazards <- get_timecat_hazards(lassomod)
-ridgemod_hazards <- get_timecat_hazards(ridgemod)
 
 get_timecat_survival <- function(mod_hazards){
   p <- s <- NULL
@@ -448,16 +366,58 @@ get_timecat_survival <- function(mod_hazards){
   return(list(pmf=p, surv=s))
 }
 
+
+#calculate the hazards of each time category (kernels are a little more complicated)
+logmod_hazards <- get_timecat_hazards(logmod)
+lassomod_hazards <- get_timecat_hazards(lassomod)
+ridgemod_hazards <- get_timecat_hazards(ridgemod)
+
+
+
 logmod_surv <- get_timecat_survival(logmod_hazards)
 lassomod_surv <- get_timecat_survival(lassomod_hazards)
 ridgemod_surv <- get_timecat_survival(ridgemod_hazards)
 
+
+par(mfrow=c(1,3))
 plot(x=1:length(logmod_surv[[2]]), y=logmod_surv[[2]], type="s")
 plot(x=1:length(lassomod_surv[[2]]), y=lassomod_surv[[2]], type="s")
 plot(x=1:length(ridgemod_surv[[2]]), y=ridgemod_surv[[2]], type="s")
 ```
 
+#CREATE INDIVIDUAL SURVIVAL CURVES HERE
+
+###Interpretation 
+
+The models we build for this analysis do not fit the data well. This can be due to a relatively small sample
+size of 335 patients, or the possibility that there is no measurable difference between races, genders, and
+clinical presentation in time to treatment. In future analysis, we will attempt to fit more flexible models,
+such as generalized additive models with kernel smoothing.
+
+
+
+##Final Model Exploration 
+
+describe kernel regression 
+
+
 ```{r}
+binnedplot(x=kernelmod_stats$p_hat, y=kernelmod_stats$resids_d, main = "Kernel Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
+```
+
+
+
+##Results  
+
+```{r}
+kable(kernelmod_coef)
+```
+
+
+###Survival Curves 
+
+```{r}
+
 #kernel survival curve 
 bounds=c(0,1,2,3,4,5)
 kernels=2
@@ -474,26 +434,165 @@ colnames(kernel.weights_1)= colnames
 x= predict(kernelmod, kernel.weights_1)
 
 
-
 kernel_surv= get_timecat_survival(invlogit(x))
-plot(x=1:length(logmod_surv[[2]]), y=logmod_surv[[2]], type="s")
-```
+plot(x=1:length(kernel_surv[[2]]), y=kernel_surv[[2]], type="s")
 
+ksurv_k1= get_timecat_survival(c(invlogit(x)[1], 1,1,1,1,1))
+ksurv_k2= get_timecat_survival(c(1, invlogit(x)[2],1,1,1,1))
+ksurv_symp0= get_timecat_survival(c(1, 1,invlogit(x)[3],1,1,1))
+ksurv_symp2= get_timecat_survival(c(1, 1,1,invlogit(x)[4],1,1))
+ksurv_raceother= get_timecat_survival(c(1, 1,1,1,invlogit(x)[5],1))
+ksurv_male= get_timecat_survival(c(invlogit(x)[1], 1,1,1,1,invlogit(x)[6]))
+
+plot(x=1:length(ksurv_k1[[2]]), y=ksurv_k1[[2]], type="s", col="red")
+plot(x=1:length(ksurv_k2[[2]]), y=ksurv_k2[[2]] ,  type="s", col="blue")
+plot(x=1:length(ksurv_symp0[[2]]), y=ksurv_symp0[[2]],  type="s", col="green")
+plot(x=1:length(ksurv_symp2[[2]]), y=ksurv_symp2[[2]], type="s", col="black")
+plot(x=1:length(ksurv_raceother[[2]]), y=ksurv_raceother[[2]],  type="s",col="magenta")
+plot(x=1:length(ksurv_male[[2]]), y=ksurv_male[[2]],  type="s",col="orange")
+
+
+
+```
+###Interpretation 
+
+
+
+
+
+# Discussion
+
+why nothing is significant:
 
 ```{r}
-plot(survfit(Surv(timecat, fail) ~ raceother + male, data = datcat_X), 
-     main=expression(paste("Kaplan-Meier Estimate ", hat(S)(t), " with CI")),xlab="t", ylab="Survival", lwd=2)
+#this is not actually part of the report as of right now
+dat$lnctdel <- log(dat$nctdel+0.01)
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n))) 
+
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel))
+
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel))
+
 ```
 
-```{r}
-plot(survfit(Surv(timecat, fail) ~ raceother + male, data=datcat_X) , xlab="Survival Time", 
-  ylab="% Surviving", yscale=100, col=c("red","blue", "black", "green"),
-  main="Survival Distributions") 
-  legend("topright", title="Legend", c("Black/Hisp", "Non Black/Hisp" ,"Male", "Female"),
-  fill=c("red", "blue", "black", "green"))
-  
-  survdiff(Surv(timecat, fail) ~ raceother + male, data=datcat_X)
-```
+##References 
+
+https://www.r-bloggers.com/imputing-missing-data-with-r-mice-package/
+
+http://influentialpoints.com/Training/coxs_proportional_hazards_regression_model-principles-properties-assumptions.htm#modmch
 
 
+https://www.ncbi.nlm.nih.gov/pmc/articles/PMC3059453/
+
+
+http://dwoll.de/rexrepos/posts/survivalKM.html
+
+##Credits 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Old survival curves.. not sure if we need these 
+# ```{r}
+# plot(survfit(Surv(timecat, fail) ~ raceother + male, data = datcat_X), 
+#      main=expression(paste("Kaplan-Meier Estimate ", hat(S)(t), " with CI")),xlab="t", ylab="Survival", lwd=2)
+# ```
+# 
+# ```{r}
+# plot(survfit(Surv(timecat, fail) ~ raceother + male, data=datcat_X) , xlab="Survival Time", 
+#   ylab="% Surviving", yscale=100, col=c("red","blue", "black", "green"),
+#   main="Survival Distributions") 
+#   legend("topright", title="Legend", c("Black/Hisp", "Non Black/Hisp" ,"Male", "Female"),
+#   fill=c("red", "blue", "black", "green"))
+#   
+#   survdiff(Surv(timecat, fail) ~ raceother + male, data=datcat_X)
+# ```
+
+
+
+Mice stuff 
+
+# ```{r}
+# data <- read.table("kellydat.txt", header=T)
+# data$race = 0
+# data$race[data$black==1|data$hisp==1] = 1
+# data$sn0 = 0
+# data$sn0[data$sn1==0 & data$sn2==0 & data$sn3==0 & data$all4==0] = 1
+# 
+# data.imp = data
+# data.imp$nctdel[data.imp$fail == 0] = NA
+# 
+# #md.pattern(data.imp[!is.na(data.imp$nctdel),])
+# 
+# tempData <- mice(data.imp,m=5,maxit=50,meth='pmm',seed=500, print=FALSE)
+# # methods: 
+# # 2l.norm / 2l.pan / 2lonly.mean / 2lonly.norm / 2lonly.pmm / 
+# # cart / fastpmm / lda / logreg / logreg.boot / mean / midastouch / norm / norm.boot / norm.nob / 
+# # norm.predict / passive / pmm / polr / polyreg / quadratic / rf / ri / sample
+# 
+# #tempData$imp$nctdel
+# 
+# data.imp <- complete(tempData)
+# 
+# hist(log(data.imp$nctdel + 0.1))
+# 
+# fit <-lm(log(nctdel+0.1) ~ sn0 + sn1 + sn2 + race + male, data = data)
+# ```
+# 
+# ##Diagnostic 
+# 
+# 
+# 
+# 
+# 
+# 
+# 
+# ```{r}
+# library(VIM)
+# library(mice)
+# 
+# 
+# ##looking for pattern of missing data
+# md.pattern(data.imp)
+# 
+# #visualizations: 
+# aggr_plot <- aggr(data, col=c('navyblue','red'), numbers=TRUE, sortVars=TRUE, labels=names(data), cex.axis=.7, gap=3, ylab=c("Histogram of missing data","Pattern"))
+# 
+# marginplot(data.imp[c(1,2)])
+# marginplot(data[c(1,3)])
+# marginplot(data[c(1,4)])
+# marginplot(data[c(1,5)])
+# marginplot(data[c(1,6)])
+# marginplot(data[c(1,7)])
+# marginplot(data[c(1,8)])
+# marginplot(data[c(1,9)])
+# marginplot(data[c(1,10)])
+# 
+# 
+# 
+# #visualize distribution of original and imputed data- check if imputed data is plausible
+# 
+# #xyplot(tempData,nctdel ~ fail+male+black,pch=18,cex=1)  
+# 
+# #densityplot(tempData)
+# 
+# #stripplot(data, pch = 20, cex = 1.2)
+# ```
 
