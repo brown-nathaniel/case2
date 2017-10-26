@@ -22,7 +22,7 @@ library(arm)
 library(mice)
 ```
 
-```{r}
+```{r, warning=FALSE, echo=FALSE, message=FALSE}
 dat <- read.table("kellydat.txt", header=T)
 dat$race = "Other"
 dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
@@ -39,6 +39,75 @@ dat = dat %>% group_by(symptom) %>% mutate(symptomscan = ifelse(fail == 1, mean(
 dat = dat %>% group_by(gender) %>% mutate(genderscan = ifelse(fail == 1, mean(fail), 1-mean(fail))) %>% as.data.frame()
 ```
 
+## Introduction
+
+The data are from a study of time to critical neurological assessment for patients with stroke-like symptoms who are admitted to the emergency room. We are interested in the factors predictive of the time to assessment following admission to the ED for n=335 patients with mild to moderate motor impairment. The goal of the analysis is to perform inferences on the impact of clinical presentation, gender, and race (Black, Hispanic, and others) on time to neurological assessment, where clinical presentation is measured as the number of the four major stroke symptoms: headache, loss of motor skills or weakness, trouble talking or understanding, and vision problems. However, as discussed in our previous report, we group Blacks and Hispanics together, and number of symptoms of 3 and 4 together, due to their small sample size.
+
+##Methods
+
+The team has cleaned, understood, and modeled these time to critical neurological assessment for patients with stroke-like symptoms data in order to solve the scientific problem of exploring if gender, race/ethnicity, and clinical presentation have an affect on wait list to assessment. To do so the team has approached the problem as such:
+  *
+  *
+  *
+  *
+  *
+
+
+##Data Exploration
+
+###Variables 
+
+The original data set contains 335 observations across 9 variables. They are defined as: 
+
+
+Variable Name | Short Description | Type  
+------------- | ------------- | --------------
+nctdel|min of neurologist time to assessment & CT scan from arrival at ER| continous
+fail|1 if got neurologist/CT scan & 0 otherwise|categorical
+male| 1 if male, 0 if female| categorical
+black|1 if black, 0 if not black|categorical
+hisp|1 if hispanic, 0 if not hispanic|categorical
+sn1|0/1 indicator 1 main symptom| categorical
+sn2|0/1 indicator 2 main symptoms| categorical
+sn3|0/1 indicator 3 main symptoms| categorical
+all4|0/1 indicator all main sumptoms|categorical 
+
+###Exploratory Data Analysis 
+
+```{r}
+
+par(mfrow=c(1,3))
+dat.KM.race <- survfit(Surv(nctdel, fail) ~ race, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.race, main=expression(paste("KM-Est ", hat(S)[g](t), " for Race")),
+     xlab="t", ylab="Survival", lwd=2, col=1:3, cex.main=0.9)
+legend(x="topright", col=1:2, lwd=2, legend=c("Black/Hisp", "Other"))
+
+
+dat.KM.gender <- survfit(Surv(nctdel, fail) ~ male, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.gender, main=expression(paste("KM-Est ", hat(S)[g](t), " for Gender")),
+     xlab="t", ylab="Survival", lwd=2, col=1:2, cex.main=0.9)
+legend(x="topright", col=1:2, lwd=2, legend=c("male", "female"))
+
+
+dat.KM.symptom <- survfit(Surv(nctdel, fail) ~ symptom, type="kaplan-meier", conf.type="log", data=dat)
+
+plot(dat.KM.symptom, main=expression(paste("KM-Est ", hat(S)[g](t), " for Clinical Presentation")),
+     xlab="t", ylab="Survival", lwd=2, col=1:4, cex.main=0.9)
+legend(x="topright", col=1:4, lwd=2, legend=c("0", "1", "2", "3+"))
+
+
+```
+
+##Initial Model Exploration
+
+describe process of lasso, ols, and ridge 
+
+
+##Final Model Exploration 
+
+describe kernel regression 
 
 ```{r logitfunctions}
 #all the functions
@@ -214,66 +283,6 @@ kernelmod_coef <- logistic_conf(kernelmod)
 
 
 ```{r}
-binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
-```
-
-```{r}
-binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
-```
-
-```{r}
-binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
-```
-
-
-```{r}
-binnedplot(x=kernelmod_stats$p_hat, y=kernelmod_stats$resids_d, main = "Kernel Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50)
-```
-
-```{r}
-d <- round(matrix(c(logmod_test, lassomod_test, ridgemod_test, kernelmod_test)),4)
-colnames(d) <- "Deviance p-value"
-rownames(d) <- c("OLS", "LASSO Penalty", "Ridge Penalty", "Kernels")
-
-kable(d)
-kable(logmod_coef)
-kable(lassomod_coef)
-kable(ridgemod_coef)
-kable(kernelmod_coef)
-```
-
-
-
-
-```{r}
-# sampleGibbs <- function(start.a, start.b, n.sims, data){
-#   # get sum, which is sufficient statistic
-#   x <- sum(data, na.rm=TRUE)
-#   # get n
-#   n <- nrow(data)
-#   # create empty matrix, allocate memory for efficiency
-#   res <- matrix(NA, nrow = n.sims, ncol = 2)
-#   res[1,] <- c(start.a,start.b)
-#   for (i in 2:n.sims){
-#     # sample the values
-#     res[i,1] <- rgamma(1, shape = n+1,
-#     rate = res[i-1,2]*x+1)
-#     res[i,2] <- rgamma(1, shape = n+1,
-#     rate = res[i,1]*x+1)
-#   }
-#   return(res)
-# }
-# 
-# # run Gibbs sampler
-# n.sims <- 10000
-# res <- sampleGibbs(.25,.25,n.sims,data)
-# head(res)
-# 
-# d <- as.matrix(log(dat$nctdel+0.01))
-# result <- sampleGibbs(1,1,n.sims,d)
-```
-
-```{r}
 data <- read.table("kellydat.txt", header=T)
 data$race = 0
 data$race[data$black==1|data$hisp==1] = 1
@@ -299,7 +308,29 @@ hist(log(data.imp$nctdel + 0.1))
 
 fit <-lm(log(nctdel+0.1) ~ sn0 + sn1 + sn2 + race + male, data = data)
 ```
-##Assumptions
+
+##Diagnostic 
+
+<!-- ```{r} -->
+<!-- binnedplot(x=logmod$fitted.values, y=logmod_stats$resids_d, main = "OLS Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- binnedplot(x=lassomod_stats$p_hat, y=lassomod_stats$resids_d, main = "LASSO Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
+<!-- ``` -->
+
+<!-- ```{r} -->
+<!-- binnedplot(x=ridgemod_stats$p_hat, y=ridgemod_stats$resids_d, main = "Ridge Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- binnedplot(x=kernelmod_stats$p_hat, y=kernelmod_stats$resids_d, main = "Kernel Logistic Regression Binned Residuals", ylab = "Deviance Residuals", xlab = "Fitted Values", nclass = 50) -->
+<!-- ``` -->
+
+
+
+
 ```{r}
 library(VIM)
 library(mice)
@@ -331,6 +362,52 @@ marginplot(data[c(1,10)])
 
 #stripplot(data, pch = 20, cex = 1.2)
 ```
+##Interpretation 
+
+```{r}
+d <- round(matrix(c(logmod_test, lassomod_test, ridgemod_test, kernelmod_test)),4)
+colnames(d) <- "Deviance p-value"
+rownames(d) <- c("OLS", "LASSO Penalty", "Ridge Penalty", "Kernels")
+
+kable(d)
+kable(logmod_coef)
+kable(lassomod_coef)
+kable(ridgemod_coef)
+kable(kernelmod_coef)
+```
+
+# Discussion
+
+why nothing is significant:
+
+```{r}
+#this is not actually part of the report as of right now
+dat$lnctdel <- log(dat$nctdel+0.01)
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n))) 
+
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel))
+
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel))
+
+```
+
+##References 
+
+https://www.r-bloggers.com/imputing-missing-data-with-r-mice-package/
+
+##Credits 
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -418,21 +495,5 @@ plot(survfit(Surv(timecat, fail) ~ raceother + male, data=datcat_X) , xlab="Surv
   survdiff(Surv(timecat, fail) ~ raceother + male, data=datcat_X)
 ```
 
-# Discussion
 
-why nothing is significant:
 
-```{r}
-#this is not actually part of the report as of right now
-dat$lnctdel <- log(dat$nctdel+0.01)
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n))) 
-
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-```
-
-#References 
-
-https://www.r-bloggers.com/imputing-missing-data-with-r-mice-package/
