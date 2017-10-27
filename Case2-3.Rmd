@@ -137,7 +137,6 @@ data.sym = data.frame(m2,ratio=m1$ratio)
 data.sym = ddply(data.sym, .(symptom), transform, position1 = cumsum(value) - 0.5*value)
 data.sym = ddply(data.sym, .(symptom), transform, position = sum(value) - position1)
 
-
 ggplot(data.race,aes(x = race, y = value, fill = scan)) + theme_bw() +
   geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Race", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Race")
 ggplot(data.gender,aes(x = gender, y = value, fill = scan)) + theme_bw() +
