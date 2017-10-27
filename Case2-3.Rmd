@@ -404,6 +404,9 @@ ridgemod_surv <- get_timecat_survival(ridgemod_hazards)
 plot(x=1:length(logmod_surv[[2]]), y=logmod_surv[[2]], type="s", main= "OLS Cumulative Survival", ylab="Survival", xlab="t")
 # plot(x=1:length(lassomod_surv[[2]]), y=lassomod_surv[[2]], type="s")
 # plot(x=1:length(ridgemod_surv[[2]]), y=ridgemod_surv[[2]], type="s")
+
+
+
 ```
 
 #CREATE INDIVIDUAL SURVIVAL CURVES HERE
@@ -433,7 +436,7 @@ binnedplot(x=kernelmod_stats$p_hat, y=kernelmod_stats$resids_d, main = "Kernel L
 
 ##Results  
 
-The coefficients of this model suggest wait time changes with number of symptoms, race, and gender; however, since the coefficients are small and close to 0 they do not suggest that much influence on wait time. Nevertheless, the more the symtoms the shorter the wait time, if the patient is non black or non hispanic the wait time will be shorter, and finally if the patient is male the wait time is expected to be shorter as well. 
+The coefficients of this model suggest wait time changes with number of symptoms, race, and gender; however, since the coefficients are small and close to 0 they do not suggest that much influence on wait time. Nevertheless, the more the symtoms the shorter the wait time, if the patient is non black or non hispanic the wait time will be shorter, and finally if the patient is male the wait time is expected to be shorter as well. In terms of significance the other predictor that came back with a p value of <.05 (0.0224) was a patient with 0 symptoms; therefore, we can say those with the least symptoms will wait the least time. 
 
 
 ```{r}
@@ -467,12 +470,13 @@ colnames(kernel.weights_1)= colnames
 x= predict(kernelmod, kernel.weights_1)
 
 kernel_surv= get_timecat_survival(invlogit(x))
-plot(x=1:length(kernel_surv[[2]]), y=kernel_surv[[2]], type="s", xlab = "Kernels", ylab = "Survival",main= "Cumulative Kernel Survival")
+
+plot(x=1:length(kernel_surv[[2]]), y=kernel_surv[[2]], type="s", main= "Cumulative Kernel Survival", xlab="t", ylab="Survival")
 
 
 ```
 
-Here we see the survival curves based on 0 symptoms, 1 symptom, 2 symptoms, gender, and race. 
+Here we see the survival curves based on 0 symptoms, 1 symptom, 2 symptoms, gender, and race. The curves also suggest there is little effect of clinical presentation, gender, and race on the wait time. 
 
 ```{r}
 kernel.weights_2= data.frame(kernel.weights, rep(1,6), rep(0,6),rep(0,6),rep(0,6),rep(0,6))
@@ -499,22 +503,42 @@ colnames(kernel.weights_5)= colnames
 y3=predict(kernelmod, kernel.weights_5)
 kernel_surv_raceother= get_timecat_survival(invlogit(y3))
 
+kernel.weights_55= data.frame(kernel.weights, rep(0,6), rep(0,6),rep(0,6),rep(0,6),rep(0,6))
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames(kernel.weights_55)= colnames
+y33=predict(kernelmod, kernel.weights_55)
+kernel_surv_race= get_timecat_survival(invlogit(y33))
+
 kernel.weights_6= data.frame(kernel.weights, rep(0,6), rep(0,6),rep(0,6),rep(0,6),rep(1,6))
 colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 colnames(kernel.weights_6)= colnames
 y4=predict(kernelmod, kernel.weights_6)
 kernel_surv_male= get_timecat_survival(invlogit(y4))
 
+kernel.weights_7= data.frame(kernel.weights, rep(0,6), rep(0,6),rep(0,6),rep(0,6),rep(0,6))
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames(kernel.weights_7)= colnames
+y5=predict(kernelmod, kernel.weights_7)
+kernel_surv_female= get_timecat_survival(invlogit(y5))
 
 
 
-plot(x=1:length(kernel_surv_symp0[[2]]), y=kernel_surv_symp0[[2]], type="s", col="red", plot="Survival Curves", ylab="Survival", xlab="t")
-lines(x=1:length(kernel_surv_symp1[[2]]), y=kernel_surv_symp1[[2]], col="blue")
-lines(x=1:length(kernel_surv_symp2[[2]]), y=kernel_surv_symp2[[2]], col="black")
-lines(x=1:length(kernel_surv_raceother[[2]]), y=kernel_surv_raceother[[2]], col="green")
-lines(x=1:length(kernel_surv_male[[2]]), y=kernel_surv_male[[2]],  col="magenta")
-legend(4, .8, legend=c("0 Symptoms", "1 Symptom", "2 Symptoms", "Non Black/Non Hisp", "Male"),
-       col=c("red", "blue", "black", "green", "magenta"), lty=1:2, cex=0.8)
+
+par(mfrow=c(1,3))
+plot(x=1:length(kernel_surv_symp0[[2]]), y=kernel_surv_symp0[[2]], type="s", col="red", plot="Survival Curves", ylab="Survival", xlab="t", main="Symptoms Survival Curve")
+lines(x=1:length(kernel_surv_symp1[[2]]), y=kernel_surv_symp1[[2]], type="s", col="blue")
+lines(x=1:length(kernel_surv_symp2[[2]]), y=kernel_surv_symp2[[2]], type="s", col="black")
+legend(3.5, .8, legend=c("0 symp", "1 Symp", "3+Symp"), col=c("red", "blue", "black"), cex=0.8)
+
+
+plot(x=1:length(kernel_surv_raceother[[2]]), y=kernel_surv_raceother[[2]],type="s", col="green", main="Race Survival Curve", ylab="Survival", xlab="t")
+lines(x=1:length(kernel_surv_race[[2]]), y=kernel_surv_race[[2]],type="s", col="blue")
+legend(3.5, .8, legend=c("NonBlack/NonHisp", "Black/Hisp"), col=c("green", "blue"), cex=0.8)
+
+plot(x=1:length(kernel_surv_male[[2]]), y=kernel_surv_male[[2]], type="s", col="magenta", main= "Gender Survival Curve", ylab="Survival", xlab="t")
+lines(x=1:length(kernel_surv_female[[2]]), y=kernel_surv_female[[2]], type="s", col="black")
+legend(3.5, .8, legend=c("Male", "Female"), col=c("magenta", "black"), cex=0.8)
+
 
 ```
 
@@ -526,18 +550,9 @@ legend(4, .8, legend=c("0 Symptoms", "1 Symptom", "2 Symptoms", "Non Black/Non H
 
 # Discussion
 
-why nothing is significant:
+In the end our models did not come back with much insight on the impact of clinical presentation, gender, and race on wait time. To discuss we believe this could be due to the weakness of the sample size. Specifically with the way we made our kernels (which splits up time into binds and focus on fitting the data within each bin) we noticed there was very little data in the group we made that have longer than a 5 time unit wait. Because there was not enough data on the people who had to wait the longest our analysis could not draw any conclusion on what was influencing those people to wait the longest. Perhaps with more data we could use the same flexible model strategy through kernel logistic regression and draw better conclusions about the impact of race, gender, and clinical presentation on wait time. 
 
-```{r}
-#this is not actually part of the report as of right now
-dat$lnctdel <- log(dat$nctdel+0.01)
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n))) 
 
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-```
 
 ##References 
 
@@ -570,7 +585,18 @@ http://dwoll.de/rexrepos/posts/survivalKM.html
 
 
 
+<!-- why nothing is significant: -->
 
+<!-- ```{r} -->
+<!-- #this is not actually part of the report as of right now -->
+<!-- dat$lnctdel <- log(dat$nctdel+0.01) -->
+<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n)))  -->
+
+<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel)) -->
+
+<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel)) -->
+
+<!-- ``` -->
 
 
 Old survival curves.. not sure if we need these 
