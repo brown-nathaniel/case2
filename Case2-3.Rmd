@@ -475,7 +475,7 @@ plot(x=1:length(kernel_surv[[2]]), y=kernel_surv[[2]], type="s", main= "Cumulati
 
 ```
 
-Here we see the survival curves based on 0 symptoms, 1 symptom, 2 symptoms, gender, and race. 
+Here we see the survival curves based on 0 symptoms, 1 symptom, 2 symptoms, gender, and race. The curves also suggest there is little effect of clinical presentation, gender, and race on the wait time. 
 
 ```{r}
 kernel.weights_2= data.frame(kernel.weights, rep(1,6), rep(0,6),rep(0,6),rep(0,6),rep(0,6))
@@ -547,18 +547,9 @@ lines(x=1:length(kernel_surv_female[[2]]), y=kernel_surv_female[[2]], type="s", 
 
 # Discussion
 
-why nothing is significant:
+In the end our models did not come back with much insight on the impact of clinical presentation, gender, and race on wait time. To discuss we believe this could be due to the weakness of the sample size. Specifically with the way we made our kernels (which splits up time into binds and focus on fitting the data within each bin) we noticed there was very little data in the group we made that have longer than a 5 time unit wait. Because there was not enough data on the people who had to wait the longest our analysis could not draw any conclusion on what was influencing those people to wait the longest. Perhaps with more data we could use the same flexible model strategy through kernel logistic regression and draw better conclusions about the impact of race, gender, and clinical presentation on wait time. 
 
-```{r}
-#this is not actually part of the report as of right now
-dat$lnctdel <- log(dat$nctdel+0.01)
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n))) 
 
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel))
-
-```
 
 ##References 
 
@@ -591,7 +582,18 @@ http://dwoll.de/rexrepos/posts/survivalKM.html
 
 
 
+<!-- why nothing is significant: -->
 
+<!-- ```{r} -->
+<!-- #this is not actually part of the report as of right now -->
+<!-- dat$lnctdel <- log(dat$nctdel+0.01) -->
+<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n)))  -->
+
+<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel)) -->
+
+<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel)) -->
+
+<!-- ``` -->
 
 
 Old survival curves.. not sure if we need these 
