@@ -1,5 +1,5 @@
 ---
-title: "Untitled"
+title: "Case 2 Final Report"
 author: "Nathaniel Brown, In Hee Ho, Sarah Zimmermann"
 date: "October 19, 2017"
 output:
@@ -147,7 +147,7 @@ p3<-ggplot(data.sym,aes(x = symptom, y = value, fill = scan)) + theme_bw() +
   geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Number of Symptoms", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Symptoms")
 grid.arrange(p1, p2,p3, nrow=3)
 ```
-
+There do not appear to be differences in whether or not patient receives a scan between different race or gender. However, the ratio of patients receiving neurological scan is higher for patients who have no syptom and for patients who have 2 symptoms. The ratio drops much when patients show 3 or more symptoms. This insight can be useful in the model later.
 
 
 ```{r}
@@ -197,7 +197,7 @@ categorize_dat <- function(dat=NA, bounds=NA){
                  symptom1 = ifelse(symptom == 1, 1, 0),
                  symptom2 = ifelse(symptom == 2, 1, 0),
                  raceother = ifelse(race == "Other", 1, 0), 
-                 male = ifelse(gender == "male", 1, 0), 
+                 male = ifelse(gender == "Male", 1, 0), 
                  personid = as.integer(personid), 
                  timecat = as.integer(timecat.x), 
                  fail = as.integer(fail.x)) %>% 
@@ -286,7 +286,6 @@ kernel_transformation <- function(datcat, bounds, kernels, s=NA) {
 
 bounds <- 0:5
 datcat_X <- categorize_dat(dat, bounds)
-datcat_X$male = datcat$male
 indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid", "timecat", "nctdel"))
 X <- as.matrix(datcat_X[,indepcols])
 y <- datcat_X$fail
