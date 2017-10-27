@@ -585,18 +585,17 @@ http://dwoll.de/rexrepos/posts/survivalKM.html
 
 
 
-<!-- why nothing is significant: -->
+<!-- why nothing is significant: 
 
-<!-- ```{r} -->
-<!-- #this is not actually part of the report as of right now -->
-<!-- dat$lnctdel <- log(dat$nctdel+0.01) -->
-<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n)))  -->
+ #this is not actually part of the report as of right now
+dat$lnctdel <- log(dat$nctdel+0.01)
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(symptom) %>% summarize(mean = mean(nctdel), n = n(), sd = sd(nctdel)) %>% mutate(lower = (mean - 1.96*sd/sqrt(n)), upper = (mean + 1.96*sd/sqrt(n)))
 
-<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel)) -->
+dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(gender) %>% summarize(mean = mean(nctdel), median = median(nctdel)) 
 
-<!-- dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel)) -->
+ dat %>% filter(nctdel < quantile(nctdel,0.95) & fail == 1) %>% group_by(race) %>% summarize(mean = mean(nctdel), median = median(nctdel)) 
 
-<!-- ``` -->
+
 
 
 Old survival curves.. not sure if we need these 
@@ -685,4 +684,4 @@ Mice stuff
 # 
 # #stripplot(data, pch = 20, cex = 1.2)
 # ```
-
+-->
