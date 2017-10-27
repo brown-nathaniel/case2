@@ -148,11 +148,13 @@ p3<-ggplot(data.sym,aes(x = symptom, y = value, fill = scan)) + theme_bw() +
 grid.arrange(p1, p2,p3, nrow=3)
 ```
 
+
+
 ```{r}
 ggplot(data = dat, aes(x=nctdel, fill=scan)) + geom_histogram(binwidth = 1, col="white") + theme_bw() + labs(x="Time to Assessment", y="Frequency", fill="Scanned or Not")
 ```
 
-We observe some non-linearity of the distribution of the variable nctdel. Hence, we decide to use kernel regression to capture such non-linearity.
+We observe some non-linearity of the distribution of the time-to-event variable. Hence, we use kernel regression to capture such non-linearity. We categorize variable nctdel each for every 1 minute. However, the sample size gets very small after 5 minutes, as can be observed from the above plot. Hence, we group all events occuring after 5 minutes grouped together.
 
 
 ```{r logitfunctions}
@@ -326,15 +328,8 @@ kernelmod_coef <- logistic_conf(kernelmod)
 
 #Initial Model Exploration
 
-Now that we have visualized each variable along with the relationship between the variables we will continue on to modeling our data. 
 
-To perform logistic regression on the data, we categorize the time-to-event variable into groups of 1 minute,
-with all events occuring after 5 minutes grouped together, since the sample size is low after 5 minutes, with
-only 9 observations. Our predictors consist of these time categories, as well as the aforementioned categories
-of race, gender, and clinical presentation. The binned residual plots, deviance test results, and coefficients are
-reported below. We attempt three approaches to logistic regresion: Ordinary Least Squares (OLS), LASSO,
-and Ridge. The glmnet package does not provide standard errors for its coefficients, so we cannot report
-confidence intervals for the estimates.We choose to move forward with the OLS model because of the fit of the model to the data. See exploration below. 
+Our predictors consist of the aforementioned categories of assessment time, race, gender, and clinical presentation. The binned residual plots, deviance test results, and coefficients are reported below. We attempt three approaches to logistic regresion: Ordinary Least Squares (OLS), LASSO, and Ridge. The glmnet package does not provide standard errors for its coefficients, so we cannot report confidence intervals for the estimates.We choose to move forward with the OLS model because of the fit of the model to the data. See exploration below. 
 
 ###Diagnostics
 
