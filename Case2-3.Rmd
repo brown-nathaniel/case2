@@ -284,7 +284,7 @@ indepcols <- which(!colnames(datcat_X) %in% c("fail", "personid", "timecat", "nc
 X <- as.matrix(datcat_X[,indepcols])
 y <- datcat_X$fail
 
-kernels <- 7
+kernels <- 2
 datcat_Xk <- kernel_transformation(datcat_X, bounds, kernels, s=NA)
 indepcolsk <- which(!colnames(datcat_Xk) %in% c("fail", "personid", "timecat", "nctdel"))
 Xk <- as.matrix(datcat_Xk[,indepcolsk])
@@ -454,14 +454,14 @@ Below is the survival curve for the entire population despite race, gender, and 
 
 #kernel survival curve 
 bounds=c(0,1,2,3,4,5)
-kernels=7
+kernels=2
 tau <- seq(from=1, to=max(bounds), length.out = kernels)
 s <- (tau[2]-tau[1])/2
 kernel.weights <- matrix(dnorm(x=rep(1:length(bounds),kernels),mean=rep(tau,each=length(bounds)),s), ncol=kernels)
 
 kernel.weights_1= data.frame(kernel.weights, rep(-0.73895618, 6), rep(-0.35687333, 6), rep(-0.44156633), rep(0.05489664 ,6), rep(-0.25308262, 6) )
 
-colnames= c("k1", "k2", "k3", "k4", "k5", "k6", "k7", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 
 colnames(kernel.weights_1)= colnames
 
@@ -477,31 +477,31 @@ Here we see the survival curves based on 0 symptoms, 1 symptom, 2 symptoms, gend
 
 ```{r}
 kernel.weights_2= data.frame(kernel.weights, rep(1,6), rep(0,6),rep(0,6),rep(0,6),rep(0,6))
-colnames= c("k1", "k2", "k3", "k4", "k5", "k6", "k7", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 colnames(kernel.weights_2)= colnames
 y=predict(kernelmod, kernel.weights_2)
 kernel_surv_symp0= get_timecat_survival(invlogit(y))
 
 kernel.weights_3= data.frame(kernel.weights, rep(0,6), rep(1,6),rep(0,6),rep(0,6),rep(0,6))
-colnames= c("k1", "k2", "k3", "k4", "k5", "k6", "k7", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 colnames(kernel.weights_3)= colnames
 y1=predict(kernelmod, kernel.weights_3)
 kernel_surv_symp1= get_timecat_survival(invlogit(y1))
 
 kernel.weights_4= data.frame(kernel.weights, rep(0,6), rep(0,6),rep(1,6),rep(0,6),rep(0,6))
-colnames= c("k1", "k2", "k3", "k4", "k5", "k6", "k7", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 colnames(kernel.weights_4)= colnames
 y2=predict(kernelmod, kernel.weights_4)
 kernel_surv_symp2= get_timecat_survival(invlogit(y2))
 
 kernel.weights_5= data.frame(kernel.weights, rep(0,6), rep(0,6),rep(0,6),rep(1,6),rep(0,6))
-colnames= c("k1", "k2", "k3", "k4", "k5", "k6", "k7", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 colnames(kernel.weights_5)= colnames
 y3=predict(kernelmod, kernel.weights_5)
 kernel_surv_raceother= get_timecat_survival(invlogit(y3))
 
 kernel.weights_6= data.frame(kernel.weights, rep(0,6), rep(0,6),rep(0,6),rep(0,6),rep(1,6))
-colnames= c("k1", "k2", "k3", "k4", "k5", "k6", "k7", "symptom0", "symptom1", "symptom2", "raceother", "male")
+colnames= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 colnames(kernel.weights_6)= colnames
 y4=predict(kernelmod, kernel.weights_6)
 kernel_surv_male= get_timecat_survival(invlogit(y4))
