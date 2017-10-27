@@ -20,14 +20,15 @@ library(reshape2)
 library(glmnet)
 library(arm)
 library(mice)
+library(plyr)
 ```
 
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 dat <- read.table("kellydat.txt", header=T)
 dat$race = "Other"
 dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
-dat$gender = "male"
-dat$gender[dat$male==0]="female"
+dat$gender = "Male"
+dat$gender[dat$male==0]="Female"
 dat$symptom = "0"
 dat$symptom[dat$sn1==1]="1"
 dat$symptom[dat$sn2==1]="2"
@@ -113,10 +114,41 @@ We now continue on in our report to further understand the data specifically the
 
 
 ###Exploratory Data Analysis
+```{r}
+data.race = dat[,colnames(dat)=="race" | colnames(dat)=="scan"]
+data.m = melt(table(data.race))
+m1 = ddply(melt(table(data.race)), .(race), summarize, ratio=value/sum(value)) 
+m2 = data.m[order(data.m$race),]
+data.race = data.frame(m2,ratio=m1$ratio)
+data.race = ddply(data.race, .(race), transform, position1 = cumsum(value) - 0.5*value)
+data.race = ddply(data.race, .(race), transform, position = sum(value) - position1)
+data.gender = dat[,colnames(dat)=="gender" | colnames(dat)=="scan"]
+data.m = melt(table(data.gender))
+m1 = ddply(melt(table(data.gender)), .(gender), summarize, ratio=value/sum(value)) 
+m2 = data.m[order(data.m$gender),]
+data.gender = data.frame(m2,ratio=m1$ratio)
+data.gender = ddply(data.gender, .(gender), transform, position1 = cumsum(value) - 0.5*value)
+data.gender = ddply(data.gender, .(gender), transform, position = sum(value) - position1)
+data.sym = dat[,colnames(dat)=="symptom" | colnames(dat)=="scan"]
+data.m = melt(table(data.sym))
+m1 = ddply(melt(table(data.sym)), .(symptom), summarize, ratio=value/sum(value)) 
+m2 = data.m[order(data.m$symptom),]
+data.sym = data.frame(m2,ratio=m1$ratio)
+data.sym = ddply(data.sym, .(symptom), transform, position1 = cumsum(value) - 0.5*value)
+data.sym = ddply(data.sym, .(symptom), transform, position = sum(value) - position1)
 
 
-#PUT USEFUL EDA HERE 
+ggplot(data.race,aes(x = race, y = value, fill = scan)) + theme_bw() +
+  geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Race", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Race")
+ggplot(data.gender,aes(x = gender, y = value, fill = scan)) + theme_bw() +
+  geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Gender", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Gender")
+ggplot(data.sym,aes(x = symptom, y = value, fill = scan)) + theme_bw() +
+  geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Number of Symptoms", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Symptoms")
+```
 
+```{r}
+
+```
 
 
 ```{r logitfunctions}
@@ -133,11 +165,6 @@ lower_bound <- function(x, bounds){
   return(ret)
 }
 
-de_logit <- function(logodds){
-  o <- exp(logodds)
-  p <- o/(1+o)
-  return(p)
-}
 
 #transform continuous time (nctdel) into categries based on lower bounds of "bounds" variable
 categorize_dat <- function(dat=NA, bounds=NA){
@@ -195,7 +222,7 @@ logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   }else{
     fitvals <- predict.glm(mod, newdata=data.frame(Xdat))
   }
-  p_hat <- de_logit(fitvals)
+  p_hat <- invlogit(fitvals)
   resids_p <- (ydat-p_hat)/(sqrt(p_hat*(1-p_hat)))
   s <- ydat; s[ydat==0] <- -1
   resids_d <- s*sqrt(-2*(ydat*log(p_hat) + (1-ydat)*log(1-p_hat)))
