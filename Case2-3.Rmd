@@ -20,14 +20,15 @@ library(reshape2)
 library(glmnet)
 library(arm)
 library(mice)
+library(plyr)
 ```
 
 ```{r, warning=FALSE, echo=FALSE, message=FALSE}
 dat <- read.table("kellydat.txt", header=T)
 dat$race = "Other"
 dat$race[dat$black==1|dat$hisp==1 ]="Black or Hispanic"
-dat$gender = "male"
-dat$gender[dat$male==0]="female"
+dat$gender = "Male"
+dat$gender[dat$male==0]="Female"
 dat$symptom = "0"
 dat$symptom[dat$sn1==1]="1"
 dat$symptom[dat$sn2==1]="2"
@@ -115,8 +116,45 @@ We now continue on in our report to further understand the data specifically the
 ###Exploratory Data Analysis
 
 
-#PUT USEFUL EDA HERE 
+```{r}
+data.race = dat[,colnames(dat)=="race" | colnames(dat)=="scan"]
+data.m = melt(table(data.race))
+m1 = ddply(melt(table(data.race)), .(race), summarize, ratio=value/sum(value)) 
+m2 = data.m[order(data.m$race),]
+data.race = data.frame(m2,ratio=m1$ratio)
+data.race = ddply(data.race, .(race), transform, position1 = cumsum(value) - 0.5*value)
+data.race = ddply(data.race, .(race), transform, position = sum(value) - position1)
+data.gender = dat[,colnames(dat)=="gender" | colnames(dat)=="scan"]
+data.m = melt(table(data.gender))
+m1 = ddply(melt(table(data.gender)), .(gender), summarize, ratio=value/sum(value)) 
+m2 = data.m[order(data.m$gender),]
+data.gender = data.frame(m2,ratio=m1$ratio)
+data.gender = ddply(data.gender, .(gender), transform, position1 = cumsum(value) - 0.5*value)
+data.gender = ddply(data.gender, .(gender), transform, position = sum(value) - position1)
+data.sym = dat[,colnames(dat)=="symptom" | colnames(dat)=="scan"]
+data.m = melt(table(data.sym))
+m1 = ddply(melt(table(data.sym)), .(symptom), summarize, ratio=value/sum(value)) 
+m2 = data.m[order(data.m$symptom),]
+data.sym = data.frame(m2,ratio=m1$ratio)
+data.sym = ddply(data.sym, .(symptom), transform, position1 = cumsum(value) - 0.5*value)
+data.sym = ddply(data.sym, .(symptom), transform, position = sum(value) - position1)
 
+p1 <-ggplot(data.race,aes(x = race, y = value, fill = scan)) + theme_bw() +
+  geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Race", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Race")
+p2<-ggplot(data.gender,aes(x = gender, y = value, fill = scan)) + theme_bw() +
+  geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Gender", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Gender")
+p3<-ggplot(data.sym,aes(x = symptom, y = value, fill = scan)) + theme_bw() +
+  geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Number of Symptoms", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Symptoms")
+grid.arrange(p1, p2,p3, nrow=3)
+```
+
+
+
+```{r}
+ggplot(data = dat, aes(x=nctdel, fill=scan)) + geom_histogram(binwidth = 1, col="white") + theme_bw() + labs(x="Time to Assessment", y="Frequency", fill="Scanned or Not")
+```
+
+We observe some non-linearity of the distribution of the time-to-event variable. Hence, we use kernel regression to capture such non-linearity. We categorize variable nctdel each for every 1 minute. However, the sample size gets very small after 5 minutes, as can be observed from the above plot. Hence, we group all events occuring after 5 minutes grouped together.
 
 
 ```{r logitfunctions}
@@ -133,11 +171,6 @@ lower_bound <- function(x, bounds){
   return(ret)
 }
 
-de_logit <- function(logodds){
-  o <- exp(logodds)
-  p <- o/(1+o)
-  return(p)
-}
 
 #transform continuous time (nctdel) into categries based on lower bounds of "bounds" variable
 categorize_dat <- function(dat=NA, bounds=NA){
@@ -195,7 +228,7 @@ logistic_diagnostics <- function(mod=NA, ydat=y, Xdat=X){
   }else{
     fitvals <- predict.glm(mod, newdata=data.frame(Xdat))
   }
-  p_hat <- de_logit(fitvals)
+  p_hat <- invlogit(fitvals)
   resids_p <- (ydat-p_hat)/(sqrt(p_hat*(1-p_hat)))
   s <- ydat; s[ydat==0] <- -1
   resids_d <- s*sqrt(-2*(ydat*log(p_hat) + (1-ydat)*log(1-p_hat)))
@@ -295,15 +328,8 @@ kernelmod_coef <- logistic_conf(kernelmod)
 
 #Initial Model Exploration
 
-Now that we have visualized each variable along with the relationship between the variables we will continue on to modeling our data. 
 
-To perform logistic regression on the data, we categorize the time-to-event variable into groups of 1 minute,
-with all events occuring after 5 minutes grouped together, since the sample size is low after 5 minutes, with
-only 9 observations. Our predictors consist of these time categories, as well as the aforementioned categories
-of race, gender, and clinical presentation. The binned residual plots, deviance test results, and coefficients are
-reported below. We attempt three approaches to logistic regresion: Ordinary Least Squares (OLS), LASSO,
-and Ridge. The glmnet package does not provide standard errors for its coefficients, so we cannot report
-confidence intervals for the estimates.We choose to move forward with the OLS model because of the fit of the model to the data. See exploration below. 
+Our predictors consist of the aforementioned categories of assessment time, race, gender, and clinical presentation. The binned residual plots, deviance test results, and coefficients are reported below. We attempt three approaches to logistic regresion: Ordinary Least Squares (OLS), LASSO, and Ridge. The glmnet package does not provide standard errors for its coefficients, so we cannot report confidence intervals for the estimates.We choose to move forward with the OLS model because of the fit of the model to the data. See exploration below. 
 
 ###Diagnostics
 
