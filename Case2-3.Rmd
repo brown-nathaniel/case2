@@ -465,7 +465,6 @@ kernel.weights_1= data.frame(kernel.weights, rep(coef(kernelmod)["symptom0"], 6)
 
 colnames(kernel.weights_1)= c("k1", "k2", "symptom0", "symptom1", "symptom2", "raceother", "male")
 
-colnames(kernel.weights_1)= colnames
 
 x= predict(kernelmod, kernel.weights_1)
 
