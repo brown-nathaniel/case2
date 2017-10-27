@@ -83,7 +83,6 @@ sn2|0/1 indicator 2 main symptoms| categorical
 sn3|0/1 indicator 3 main symptoms| categorical
 all4|0/1 indicator all main sumptoms|categorical
 
-There are no missing values or apparently out of range values in our data, and therefore we had no need to clean the data. However, we created variables to better visualize the data. Race is a 2-level variable (Black/Hispanic and Other) which represents all those in the dataset who are Black or Hispanic in one category and non-Black and non-Hispanic in the other. We decided to group Black and Hispanic together because Blacks and Hispanics had relatively small sample sizes, constituting 97 out of 335 patients observed. Particularly, there were only 9 Hispanics, which is a population too small to represent the group and therefore difficult to draw conclusions upon. Next, symptom is a 4 level variable: "0" for those who had no symptoms, "1" for those who had 1 symptom, "2" for those who had 2 symptoms, and "3+" for those who had 3 or more symptoms. We grouped those patients which 3 or 4 symptoms together because there were only 6 individuals out of 335 observations in the dataset who had 4 symptoms, which is very small a population size to draw any conclusions on.  
 
 ```{r}
 pdat = dat[,1:2]
@@ -105,6 +104,12 @@ p3<- ggplot(data= pdat, aes(x=gender, fill= gender)) + geom_bar() + theme_bw()+l
 grid.arrange(p1, p2, p3 , ncol=3)
 
 ```
+
+To visualize the data we have provided the above graphs which show the frequency of the characteristics patients can have. We see most (above 250) of the patients are non-black and non hispanic  and less than 100 are either black or hispanic. The most common number of symptoms is 1 then 0, 2, 3, and 4. Finally the gender split between male and females is generally even; however, there are more females in the data then male. 
+
+Before moving on it should be noted there are no missing values or apparently out of range values in our data, and therefore we did not clean the data in any way. We did group some of the characteristics of patients because of sample size, however. In the following analysis we grouped black and hispanics in one category for race/ethnicity and non black and non hispanics in the other. This decision was based on the fact there are only 9 hispanics in the data set which is too small of a population to make meaningful conclusions.  Next, symptom is a 4 level variable: "0" for those who had no symptoms, "1" for those who had 1 symptom, "2" for those who had 2 symptoms, and "3+" for those who had 3 or more symptoms. We grouped those patients which 3 or 4 symptoms together because there were only 6 individuals out of 335 observations in the dataset who had 4 symptoms, which is very small a population size to draw any conclusions on.  
+
+We now continue on in our report to further understand the data specifically the exploratory data analysis we found useful when later we created data models. 
 
 
 ###Exploratory Data Analysis
@@ -290,6 +295,8 @@ kernelmod_coef <- logistic_conf(kernelmod)
 
 ##Initial Model Exploration
 
+Now that we have visualized each variable along with the relationship between the variables we will continue on to modeling our data. 
+
 To perform logistic regression on the data, we categorize the time-to-event variable into groups of 1 minute,
 with all events occuring after 5 minutes grouped together, since the sample size is low after 5 minutes, with
 only 9 observations. Our predictors consist of these time categories, as well as the aforementioned categories
@@ -300,7 +307,7 @@ confidence intervals for the estimates.
 
 ###Diagnostics
 
-We check the diagnostics to see if the model properly fits the data.The residual plots suggest a poor fit for all the models other than the OLS model.
+We check the diagnostics to see if the model properly fits the data.The residual plots suggest a poor fit for all the models other than the OLS model because of the lack of even spread of the residuals. The logistic models require normality and independence and from the residuals we cannot fully say 
 
 ```{r}
 
@@ -409,12 +416,18 @@ binnedplot(x=kernelmod_stats$p_hat, y=kernelmod_stats$resids_d, main = "Kernel L
 
 ##Results  
 
+The coefficients of this model suggest wait time changes with number of symptoms, race, and gender; however, since the coefficients are small and close to 0 they do not suggest that much influence on wait time. Nevertheless, the more the symtoms the shorter the wait time, if the patient is non black or non hispanic the wait time will be shorter, and finally if the patient is male the wait time is expected to be shorter as well. 
+
+We will now visualize these results by creating a survival curves for the total population and survival curves for patients with 0/1/2/3+ symptoms, male/female, and black+hispanic/non-black+ non-hispanic.  
+
 ```{r}
 kable(kernelmod_coef)
 ```
 
 
 ###Survival Curves 
+
+Below is the survival curve for the entire population despite race, gender, and clinical presentation. We will compare the population survival curve to the survival curves based on gender, race, and clinical presentation. If there is a difference between the total population survival curve and the other survival curves this is a way to tell if gender, race, or clinical presentation have an influence on wait time. 
 
 ```{r}
 
