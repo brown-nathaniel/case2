@@ -114,6 +114,8 @@ We now continue on in our report to further understand the data specifically the
 
 
 ###Exploratory Data Analysis
+
+
 ```{r}
 data.race = dat[,colnames(dat)=="race" | colnames(dat)=="scan"]
 data.m = melt(table(data.race))
@@ -137,17 +139,20 @@ data.sym = data.frame(m2,ratio=m1$ratio)
 data.sym = ddply(data.sym, .(symptom), transform, position1 = cumsum(value) - 0.5*value)
 data.sym = ddply(data.sym, .(symptom), transform, position = sum(value) - position1)
 
-ggplot(data.race,aes(x = race, y = value, fill = scan)) + theme_bw() +
+p1 <-ggplot(data.race,aes(x = race, y = value, fill = scan)) + theme_bw() +
   geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Race", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Race")
-ggplot(data.gender,aes(x = gender, y = value, fill = scan)) + theme_bw() +
+p2<-ggplot(data.gender,aes(x = gender, y = value, fill = scan)) + theme_bw() +
   geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Gender", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Gender")
-ggplot(data.sym,aes(x = symptom, y = value, fill = scan)) + theme_bw() +
+p3<-ggplot(data.sym,aes(x = symptom, y = value, fill = scan)) + theme_bw() +
   geom_bar(stat = "identity")+ geom_text(aes(label = sprintf("%1.2f%%", 100*ratio), y = position)) + labs(x = "Number of Symptoms", y = "Frequency", fill = "Scanned or Not", title="Percentage of Patients Who Saw Neurologist by Symptoms")
+grid.arrange(p1, p2,p3, nrow=3)
 ```
 
 ```{r}
-
+ggplot(data = dat, aes(x=nctdel, fill=scan)) + geom_histogram(binwidth = 1, col="white") + theme_bw() + labs(x="Time to Assessment", y="Frequency", fill="Scanned or Not")
 ```
+
+We observe some non-linearity of the distribution of the variable nctdel. Hence, we decide to use kernel regression to capture such non-linearity.
 
 
 ```{r logitfunctions}
